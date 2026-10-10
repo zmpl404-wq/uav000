@@ -136,6 +136,31 @@
     formEl.target = 'gform_sink_iframe';
     formEl.className = 'space-y-6';
 
+    // 每日清點表單：加入 pageHistory=0,1,2,3,4（5頁多頁表單必要欄位）
+    if (formConfig.id === 'inventory') {
+      const phInput = document.createElement('input');
+      phInput.type = 'hidden';
+      phInput.name = 'pageHistory';
+      phInput.value = '0,1,2,3,4';
+      formEl.appendChild(phInput);
+    }
+
+    // 飛安通報表單：加入 pageHistory=0,1（2頁多頁表單必要欄位）
+    if (formConfig.id === 'accident') {
+      const phInput = document.createElement('input');
+      phInput.type = 'hidden';
+      phInput.name = 'pageHistory';
+      phInput.value = '0,1';
+      formEl.appendChild(phInput);
+    }
+
+    // 加入 fvv=1 與 submissionTimestamp=-1 標準 Google Form 隱藏參數
+    const fvvInput = document.createElement('input');
+    fvvInput.type = 'hidden';
+    fvvInput.name = 'fvv';
+    fvvInput.value = '1';
+    formEl.appendChild(fvvInput);
+
     // 每日清點表單專屬：一鍵全數已清點按鈕
     if (formConfig.id === 'inventory') {
       const quickActionBar = document.createElement('div');
@@ -457,42 +482,53 @@
     const activeForm = document.getElementById(`active_form_${state.currentFormId}`);
     if (!activeForm) return;
 
-    // 檢查必填項目
-    const requiredInputs = activeForm.querySelectorAll('[required]');
+    // 取得當前表單配置
+    const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
+    if (!formConfig) return;
+
+    // 嚴格檢查必填項目（包含文字、日期、單選、複選、下拉與網格）
     let firstInvalid = null;
     let missingName = '';
 
-    for (const input of requiredInputs) {
-      if (input.type === 'radio') {
-        const checked = activeForm.querySelector(`input[name="${input.name}"]:checked`);
-        if (!checked) {
-          firstInvalid = input;
-          const label = input.closest('.form-item-wrapper, .inventory-row')?.querySelector('label, span')?.innerText;
-          missingName = label || '必選項目';
-          break;
+    for (const section of formConfig.sections) {
+      for (const item of section.items) {
+        if (item.type === 'grid') {
+          for (const row of item.rows) {
+            if (row.required) {
+              const checked = activeForm.querySelector(`input[name="${row.entryName}"]:checked`);
+              if (!checked) {
+                firstInvalid = activeForm.querySelector(`[data-row-entry="${row.entryName}"]`) || activeForm;
+                missingName = row.label;
+                break;
+              }
+            }
+          }
+        } else if (item.required) {
+          if (item.type === 'radio' || item.type === 'checkbox') {
+            const checked = activeForm.querySelector(`input[name="${item.entryName}"]:checked`);
+            if (!checked) {
+              firstInvalid = activeForm.querySelector(`input[name="${item.entryName}"]`)?.closest('.form-item-wrapper') || activeForm;
+              missingName = item.title;
+              break;
+            }
+          } else {
+            const input = activeForm.querySelector(`[name="${item.entryName}"]`);
+            if (!input || !input.value.trim()) {
+              firstInvalid = input || activeForm;
+              missingName = item.title;
+              break;
+            }
+          }
         }
-      } else if (input.type === 'checkbox') {
-        const checked = activeForm.querySelector(`input[name="${input.name}"]:checked`);
-        if (!checked) {
-          firstInvalid = input;
-          const label = input.closest('.form-item-wrapper')?.querySelector('label')?.innerText;
-          missingName = label || '必填勾選項';
-          break;
-        }
-      } else {
-        if (!input.value.trim()) {
-          firstInvalid = input;
-          const label = input.closest('.form-item-wrapper')?.querySelector('label')?.innerText;
-          missingName = label || '必填項目';
-          break;
-        }
+        if (firstInvalid) break;
       }
+      if (firstInvalid) break;
     }
 
     if (firstInvalid) {
-      firstInvalid.focus();
+      if (typeof firstInvalid.focus === 'function') firstInvalid.focus();
       firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      showToast(`⚠️ 請填寫必填欄位：${missingName.replace('*', '').trim()}`, 'error');
+      showToast(`⚠️ 請填寫／選取必填欄位：${missingName.replace('*', '').trim()}`, 'error');
       return;
     }
 
@@ -511,18 +547,20 @@
     elements.loadingOverlay.classList.remove('hidden');
     elements.loadingOverlay.classList.add('flex');
 
-    const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
-
     try {
-      // 1. 隱藏 iframe 提交
-      activeForm.submit();
+      // 手動構建 URL-encoded body（相容性最佳，確保多值 checkbox 正確展開）
+      const bodyParts = [];
+      for (const [key, value] of formData.entries()) {
+        bodyParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+      }
+      const urlEncodedBody = bodyParts.join('&');
 
-      // 2. 同步 fetch (no-cors 確保觸發)
-      fetch(activeForm.action, {
+      await fetch(formConfig.actionUrl, {
         method: 'POST',
         mode: 'no-cors',
-        body: formData
-      }).catch(e => console.warn('Fetch fallback status:', e));
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: urlEncodedBody
+      });
 
       // 模擬雲端接收並寫入本機歷史紀錄
       const record = {
