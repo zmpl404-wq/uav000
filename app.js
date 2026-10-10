@@ -478,6 +478,15 @@
     return wrap;
   }
 
+  // 取得本地時區（臺灣時間）的今日年月日字串 (YYYY-MM-DD)，避免 UTC 轉換造成跨日或凌晨顯示為昨天的問題
+  function getLocalTodayDateString() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   // 渲染單一輸入欄位 (包含下拉式時間、人員自訂、經緯度GPS定位按鈕等)
   function renderSingleField(item, formConfig) {
     const isReq = item.required;
@@ -546,9 +555,9 @@
       return fieldContainer;
     }
 
-    // 3. 日期欄位 (移除今日按鈕，預設為今日)
+    // 3. 日期欄位 (移除今日按鈕，精確預設為本地當下日期)
     if (item.type === 'date') {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getLocalTodayDateString();
       fieldContainer.innerHTML = `
         <label class="block text-xs sm:text-sm font-semibold text-slate-200">
           ${escapeHtml(item.title)} ${reqTag}
@@ -1409,6 +1418,7 @@
       summaryItems.push({ label: '裝備清點項數', val: '56 項裝備已全數核對完成' });
     } else if (formConfig.id === 'mission') {
       summaryItems.push({ label: '表單類型', val: formConfig.title });
+      summaryItems.push({ label: '出勤日期', val: formData.get('entry.1209667024') });
       summaryItems.push({ label: '出勤單號', val: formData.get('entry.316344842') });
       summaryItems.push({ label: '出勤時間', val: `${formData.get('entry.649405272')} ~ ${formData.get('entry.2035663237')}` });
       summaryItems.push({ label: '出勤地點', val: formData.get('entry.1591612449') });
