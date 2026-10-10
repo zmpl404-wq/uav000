@@ -1,10 +1,11 @@
 /**
- * 臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單設定資料 (Forms Data Schema v2.0)
- * 包含完整 entry ID、自訂其他選項、每日清點4大區域架構、精確時間格式
+ * 臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單設定資料 (Forms Data Schema v3.0)
+ * 100% 吻合最新表單 entry ID、支援「已清點/有異常/出借」三態清點、
+ * 出借表單下拉選單與勾選飛機智慧連動、緊湊版面結構。
  */
 
 window.FORMS_DATA = {
-  version: "2.0.0",
+  version: "3.0.0",
   lastUpdated: "2026-10-10",
   unit: "臺中市政府消防局 特搜大隊特搜空拍隊",
   forms: [
@@ -12,7 +13,6 @@ window.FORMS_DATA = {
     {
       id: "borrow",
       title: "特搜大隊特搜空拍隊無人機器材借用表單",
-      description: "臺中市政府消防局特搜大隊特搜空拍隊無人機器材借用登記",
       actionUrl: "https://docs.google.com/forms/u/0/d/e/1FAIpQLSfeN9cprtLdcBOrK1yTm39rIKmfkQYpJrphfhbHNQ0M4MqGYw/formResponse",
       viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfeN9cprtLdcBOrK1yTm39rIKmfkQYpJrphfhbHNQ0M4MqGYw/viewform",
       icon: "fas fa-dolly",
@@ -20,7 +20,6 @@ window.FORMS_DATA = {
       sections: [
         {
           title: "基本資訊",
-          description: "請填寫借用人與申請基本資料",
           items: [
             {
               type: "date",
@@ -57,7 +56,6 @@ window.FORMS_DATA = {
         },
         {
           title: "借用期間",
-          description: "請選擇預計借用與歸還日期",
           items: [
             {
               type: "date",
@@ -77,7 +75,6 @@ window.FORMS_DATA = {
         },
         {
           title: "無人機機種與借出裝備",
-          description: "選擇借用的無人機與相關配件數量",
           items: [
             {
               type: "checkbox",
@@ -86,6 +83,7 @@ window.FORMS_DATA = {
               title: "無人機機體／註冊序號",
               required: true,
               hasOther: true,
+              isDroneTrigger: true, // 標記為飛機勾選連動源
               options: [
                 "T4-110 (B-AAB09228)",
                 "T4-100 (B-AAB12325)",
@@ -94,24 +92,22 @@ window.FORMS_DATA = {
               ]
             },
             {
-              type: "grid",
-              title: "無人機借出物品",
-              description: "請選擇各配件借出數量 (可選填)",
-              rows: [
-                { entryId: "465295878", entryName: "entry.465295878", label: "無人機機體", options: ["1個","2個","3個","4個","5個","6個"], required: false },
-                { entryId: "1160462732", entryName: "entry.1160462732", label: "遙控器", options: ["1個","2個","3個","4個","5個","6個"], required: false },
-                { entryId: "491493784", entryName: "entry.491493784", label: "充電器 (充電管家)", options: ["1個","2個","3個","4個","5個","6個"], required: false },
-                { entryId: "715260453", entryName: "entry.715260453", label: "傳輸線", options: ["1個","2個","3個","4個","5個","6個"], required: false },
-                { entryId: "1954683491", entryName: "entry.1954683491", label: "記憶卡", options: ["1個","2個","3個","4個","5個","6個"], required: false },
-                { entryId: "618159166", entryName: "entry.618159166", label: "電池", options: ["1個","2個","3個","4個","5個","6個"], required: false },
-                { entryId: "2131286357", entryName: "entry.2131286357", label: "備用槳", options: ["1個","2個","3個","4個","5個","6個"], required: false }
+              type: "borrowItemsDropdown", // 乾淨下拉式選單專屬型別
+              title: "無人機借出物品數量 (勾選飛機自動帶入預設套裝)",
+              items: [
+                { entryId: "465295878", entryName: "entry.465295878", label: "無人機機體", key: "droneBody" },
+                { entryId: "1160462732", entryName: "entry.1160462732", label: "遙控器", key: "remote" },
+                { entryId: "491493784", entryName: "entry.491493784", label: "充電器 (充電管家)", key: "charger" },
+                { entryId: "618159166", entryName: "entry.618159166", label: "電池", key: "battery" },
+                { entryId: "715260453", entryName: "entry.715260453", label: "傳輸線", key: "cable" },
+                { entryId: "1954683491", entryName: "entry.1954683491", label: "記憶卡", key: "sdcard" },
+                { entryId: "2131286357", entryName: "entry.2131286357", label: "備用槳", key: "propeller" }
               ]
             }
           ]
         },
         {
           title: "點收與規則確認",
-          description: "點收狀態確認與借用規則簽收",
           items: [
             {
               type: "radio",
@@ -152,11 +148,10 @@ window.FORMS_DATA = {
       ]
     },
 
-    // 2. 每日清點表單 (4大區域大格圖示結構)
+    // 2. 每日清點表單 (最新精準 entry ID + 三態清點: 已清點 / 有異常 / 出借)
     {
       id: "inventory",
       title: "特搜大隊空拍隊每日裝備清點表單",
-      description: "由各組每日副主管或指派人員於上午8點清點完畢並填寫",
       actionUrl: "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdwAM5QmoW8bvvuThSZf6KTW7M24ODZl51oiKFl5bT2D2YjcQ/formResponse",
       viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSdwAM5QmoW8bvvuThSZf6KTW7M24ODZl51oiKFl5bT2D2YjcQ/viewform",
       icon: "fas fa-clipboard-check",
@@ -185,8 +180,6 @@ window.FORMS_DATA = {
           name: "辦公室",
           icon: "fas fa-building",
           color: "from-blue-600 to-indigo-700",
-          accent: "blue",
-          description: "裝備器材箱(一)(二)、電腦桌、無線電櫃、賜典抽屜",
           groups: [
             {
               title: "裝備器材箱(一)",
@@ -201,30 +194,30 @@ window.FORMS_DATA = {
             {
               title: "裝備器材箱(二)",
               rows: [
-                { entryId: "102702167", entryName: "entry.102702167", label: "延伸三腳架/1組", required: true },
-                { entryId: "1592398402", entryName: "entry.1592398402", label: "50米高空投擲繩/1組", required: true }
+                { entryId: "102702167", entryName: "entry.102702167", label: "ECOFLOW行動電源/1台", required: true },
+                { entryId: "2110998384", entryName: "entry.2110998384", label: "輪座式延長線/1組", required: true }
               ]
             },
             {
               title: "辦公室電腦桌",
               rows: [
-                { entryId: "876622965", entryName: "entry.876622965", label: "筆記型電腦ASUS/1台", required: true }
+                { entryId: "876622965", entryName: "entry.876622965", label: "筆電", required: true }
               ]
             },
             {
               title: "無線電櫃",
               rows: [
-                { entryId: "237820296", entryName: "entry.237820296", label: "無線電手持機/2台", required: true },
-                { entryId: "1646270928", entryName: "entry.1646270928", label: "無線電車台/1台", required: true },
-                { entryId: "71790479", entryName: "entry.71790479", label: "無線電天線吸盤/1組", required: true },
-                { entryId: "1736655106", entryName: "entry.1736655106", label: "無線電電源供應器/1台", required: true }
+                { entryId: "237820296", entryName: "entry.237820296", label: "手提無線電/9支/無線電櫃內", required: true },
+                { entryId: "1442527866", entryName: "entry.1442527866", label: "救災用平板【含充電器(白)*1】", required: true },
+                { entryId: "1042625757", entryName: "entry.1042625757", label: "42車鑰匙/無線電櫃外", required: true },
+                { entryId: "1210587847", entryName: "entry.1210587847", label: "西屯43車鑰匙/無線電櫃外", required: true }
               ]
             },
             {
               title: "賜典抽屜",
               rows: [
-                { entryId: "1228999081", entryName: "entry.1228999081", label: "備用遙控器T4-100(有螢幕)/1台", required: true },
-                { entryId: "1497217595", entryName: "entry.1497217595", label: "備用遙控器T4-110(無螢幕)/1台", required: true }
+                { entryId: "1228999081", entryName: "entry.1228999081", label: "42車油卡: ALU-6772", required: true },
+                { entryId: "2107902043", entryName: "entry.2107902043", label: "西屯43車油卡: BCU-6167", required: true }
               ]
             }
           ]
@@ -234,46 +227,44 @@ window.FORMS_DATA = {
           name: "器材室",
           icon: "fas fa-toolbox",
           color: "from-amber-500 to-orange-600",
-          accent: "amber",
-          description: "可移動式螢幕、Skydio X10、T4-110、T4-100、速創(第八/四大隊)",
           groups: [
             {
               title: "可移動式螢幕",
               rows: [
-                { entryId: "617005678", entryName: "entry.617005678", label: "55吋顯示螢幕/1台", required: true },
-                { entryId: "111979435", entryName: "entry.111979435", label: "移動式腳架/1組", required: true }
+                { entryId: "617005678", entryName: "entry.617005678", label: "LG Standyme 27吋螢幕/1組", required: true },
+                { entryId: "1291567669", entryName: "entry.1291567669", label: "移動電視及移動架【在副大辦公室】", required: true }
               ]
             },
             {
               title: "無人機SKYDIO X10 /【放置桌面上】",
               rows: [
                 { entryId: "362602952", entryName: "entry.362602952", label: "無人機主體/1台", required: true },
-                { entryId: "1774390033", entryName: "entry.1774390033", label: "遙控器/1台", required: true },
-                { entryId: "1384021235", entryName: "entry.1384021235", label: "遙控器充電線/1組", required: true },
-                { entryId: "2069502958", entryName: "entry.2069502958", label: "電池/8顆", required: true },
-                { entryId: "1741549419", entryName: "entry.1741549419", label: "電池充電線/2組", required: true },
-                { entryId: "2065876352", entryName: "entry.2065876352", label: "鏡頭/1組", required: true },
-                { entryId: "1800539126", entryName: "entry.1800539126", label: "備用槳/正槳2組反槳2組", required: true },
-                { entryId: "1504936306", entryName: "entry.1504936306", label: "原廠專用攜行箱", required: true }
+                { entryId: "1570814779", entryName: "entry.1570814779", label: "遙控器/1台", required: true },
+                { entryId: "1257185405", entryName: "entry.1257185405", label: "電池/3顆", required: true },
+                { entryId: "185903321", entryName: "entry.185903321", label: "電池充電座/1台", required: true },
+                { entryId: "1704745360", entryName: "entry.1704745360", label: "HDMI線/1條", required: true },
+                { entryId: "1509044224", entryName: "entry.1509044224", label: "無人機主體直充充電組/1組", required: true },
+                { entryId: "1617763815", entryName: "entry.1617763815", label: "備用槳(1組4支)", required: true },
+                { entryId: "1635098897", entryName: "entry.1635098897", label: "原廠專用攜行箱/1箱", required: true }
               ]
             },
             {
               title: "新樂飛T4-110 /【放置桌面】",
               rows: [
                 { entryId: "883022474", entryName: "entry.883022474", label: "無人機主體/1台", required: true },
-                { entryId: "1070621434", entryName: "entry.1070621434", label: "遙控器/1台", required: true },
-                { entryId: "1340624009", entryName: "entry.1340624009", label: "電池/4顆", required: true },
-                { entryId: "1444158428", entryName: "entry.1444158428", label: "備用槳/正槳1組反槳1組", required: true },
-                { entryId: "1206129851", entryName: "entry.1206129851", label: "原廠專用攜行箱", required: true }
+                { entryId: "750327934", entryName: "entry.750327934", label: "遙控器1台含充電線(白)", required: true },
+                { entryId: "69217217", entryName: "entry.69217217", label: "新樂飛電池T4-110電池/5顆", required: true },
+                { entryId: "720460169", entryName: "entry.720460169", label: "新樂飛T4-110電池充電座(含電源線)", required: true },
+                { entryId: "1247213338", entryName: "entry.1247213338", label: "T4-110電池充電座(無電源線)/1組/桌下抽屜", required: true }
               ]
             },
             {
               title: "新樂飛T4-100 /【放置桌下】",
               rows: [
-                { entryId: "1948780774", entryName: "entry.1948780774", label: "無人機主體/1台", required: true },
-                { entryId: "1873733054", entryName: "entry.1873733054", label: "遙控器/1台", required: true },
-                { entryId: "1788734914", entryName: "entry.1788734914", label: "電池/4顆", required: true },
-                { entryId: "1342686884", entryName: "entry.1342686884", label: "備用槳/正槳1組反槳1組", required: true },
+                { entryId: "1948780774", entryName: "entry.1948780774", label: "無人機主體", required: true },
+                { entryId: "669412171", entryName: "entry.669412171", label: "遙控器【含充電線(白)】", required: true },
+                { entryId: "139456547", entryName: "entry.139456547", label: "電池/3顆", required: true },
+                { entryId: "47389847", entryName: "entry.47389847", label: "電池充電座", required: true },
                 { entryId: "667793309", entryName: "entry.667793309", label: "原廠專用攜行箱", required: true }
               ]
             },
@@ -311,8 +302,6 @@ window.FORMS_DATA = {
           name: "1樓停車格",
           icon: "fas fa-truck-pickup",
           color: "from-emerald-600 to-teal-700",
-          accent: "emerald",
-          description: "備勤車42車(ALU-6772)、西屯備勤車43車(BCU-6167)",
           groups: [
             {
               title: "備勤車42車",
@@ -335,8 +324,6 @@ window.FORMS_DATA = {
           name: "地下室",
           icon: "fas fa-bolt",
           color: "from-purple-600 to-violet-700",
-          accent: "purple",
-          description: "小型發電機 HONDA EU22i",
           groups: [
             {
               title: "發電機",
@@ -371,7 +358,6 @@ window.FORMS_DATA = {
     {
       id: "maintenance",
       title: "臺中市政府消防局特搜大隊特搜空拍隊裝備維修保養紀錄表",
-      description: "特搜大隊特搜空拍隊裝備維修保養紀錄，請填寫以利列管",
       actionUrl: "https://docs.google.com/forms/u/0/d/e/1FAIpQLSd8oDpDWeoFqjUo-FxTF8Tboinjzbp7E7anempXP-qZANKvDg/formResponse",
       viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLSd8oDpDWeoFqjUo-FxTF8Tboinjzbp7E7anempXP-qZANKvDg/viewform",
       icon: "fas fa-tools",
@@ -379,7 +365,6 @@ window.FORMS_DATA = {
       sections: [
         {
           title: "維修保養填報",
-          description: "請詳細填寫保養或維修項目",
           items: [
             {
               type: "date",
@@ -426,7 +411,6 @@ window.FORMS_DATA = {
               entryId: "1461953170",
               entryName: "entry.1461953170",
               title: "估價金額",
-              description: "若有報價請填寫",
               required: false
             },
             {
@@ -459,7 +443,6 @@ window.FORMS_DATA = {
     {
       id: "mission",
       title: "臺中市特搜大隊特搜空拍隊無人機出勤紀錄表",
-      description: "出勤管理，請於出勤返隊後填寫",
       actionUrl: "https://docs.google.com/forms/u/0/d/e/1FAIpQLScHYz90ibN8-kphlpTH0SPUwDY7atD4iu9A-CNb4ieYkv-5iA/formResponse",
       viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLScHYz90ibN8-kphlpTH0SPUwDY7atD4iu9A-CNb4ieYkv-5iA/viewform",
       icon: "fas fa-plane-departure",
@@ -467,14 +450,12 @@ window.FORMS_DATA = {
       sections: [
         {
           title: "出勤基本資訊",
-          description: "派遣資訊與出返隊時間",
           items: [
             {
               type: "text",
               entryId: "316344842",
               entryName: "entry.316344842",
               title: "派遣單編號",
-              description: "請填寫勤務指揮中心派遣編號",
               required: true
             },
             {
@@ -489,7 +470,7 @@ window.FORMS_DATA = {
               entryId: "649405272",
               entryName: "entry.649405272",
               title: "出勤時間 (時:分)",
-              description: "例: 16:30 (點擊右側現在自動填入)",
+              description: "例: 16:30",
               required: true
             },
             {
@@ -497,7 +478,7 @@ window.FORMS_DATA = {
               entryId: "2035663237",
               entryName: "entry.2035663237",
               title: "返隊時間 (時:分)",
-              description: "例: 20:30 (點擊右側現在自動填入)",
+              description: "例: 20:30",
               required: true
             },
             {
@@ -545,7 +526,6 @@ window.FORMS_DATA = {
         },
         {
           title: "無人機操作與成果",
-          description: "無人機執行細節與檔案存檔",
           items: [
             {
               type: "radio",
@@ -642,7 +622,6 @@ window.FORMS_DATA = {
     {
       id: "accident",
       title: "臺中市特搜大隊特搜空拍隊無人機失事飛安紀錄表",
-      description: "注意!!!!!請於事故發生24小時內填寫，以利通報局端與民航局無人機管理系統列管事故。",
       actionUrl: "https://docs.google.com/forms/u/0/d/e/1FAIpQLScjg1145fPu7CHxWQXVSGCPdE0yXKnxh6nW7-j2I00h7haH2w/formResponse",
       viewUrl: "https://docs.google.com/forms/d/e/1FAIpQLScjg1145fPu7CHxWQXVSGCPdE0yXKnxh6nW7-j2I00h7haH2w/viewform",
       icon: "fas fa-shield-alt",
@@ -650,7 +629,6 @@ window.FORMS_DATA = {
       sections: [
         {
           title: "事件基本通報",
-          description: "通報人員與無人機狀態",
           items: [
             {
               type: "date",
@@ -727,14 +705,13 @@ window.FORMS_DATA = {
         },
         {
           title: "飛安事件資料",
-          description: "請詳細填寫事故起飛、發生時間與事件類型",
           items: [
             {
               type: "timeText",
               entryId: "193545756",
               entryName: "entry.193545756",
               title: "起飛時間 (時:分)",
-              description: "例: 14:20 (點擊右側現在自動填入)",
+              description: "例: 14:20",
               required: true
             },
             {

@@ -235,6 +235,23 @@ body.tactical-light {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
 }
 
+/* 出借物品乾淨下拉選單 */
+.borrow-select {
+  transition: all 0.2s ease;
+  min-width: 85px;
+  cursor: pointer;
+}
+.tactical-dark .borrow-select {
+  background-color: rgba(15, 23, 42, 0.9);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+}
+.tactical-light .borrow-select {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
 /* 頂部 Tab 按鈕微互動 */
 .form-tab-btn {
   position: relative;
