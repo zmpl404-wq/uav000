@@ -235,23 +235,6 @@ body.tactical-light {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
 }
 
-/* 出借物品乾淨下拉選單 */
-.borrow-select {
-  transition: all 0.2s ease;
-  min-width: 85px;
-  cursor: pointer;
-}
-.tactical-dark .borrow-select {
-  background-color: rgba(15, 23, 42, 0.9);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #f1f5f9;
-}
-.tactical-light .borrow-select {
-  background-color: #ffffff;
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-
 /* 頂部 Tab 按鈕微互動 */
 .form-tab-btn {
   position: relative;
@@ -319,49 +302,3 @@ body.tactical-light {
     font-size: 16px !important;
   }
 }
-
-/* 必填項目未勾選之警示動畫 */
-@keyframes shake-and-glow {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-6px); }
-  40%, 80% { transform: translateX(6px); }
-}
-
-.has-validation-error {
-  animation: shake-and-glow 0.4s ease-in-out;
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4) !important;
-}
-
-/* 每日清點四大格圖示卡片微互動 */
-.area-card {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.tactical-light .area-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-}
-
-.tactical-light .area-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
-}
-
-/* 自訂其他選項展開平滑淡入動畫 */
-.other-input-container:not(.hidden) {
-  display: block;
-  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
