@@ -11,7 +11,6 @@
     currentFormId: 'borrow',
     theme: localStorage.getItem('uav_theme') || 'dark',
     history: JSON.parse(localStorage.getItem('uav_history') || '[]'),
-    customMembers: JSON.parse(localStorage.getItem('uav_custom_members') || '[]'),
     activeInventoryBlock: null
   };
 
@@ -53,60 +52,51 @@
     toastMsg: document.getElementById('toastMsg')
   };
 
-  // 每日裝備清點：6 大格戰術分類定義（手機端一屏 6 格）
-  const INVENTORY_BLOCKS = [
+  // 每日裝備清點：依照原始表單分區（辦公室、器材室、1樓室外停車格、地下室）
+  const INVENTORY_SECTIONS = [
     {
-      id: 'blk_office_boxes',
-      icon: 'fas fa-boxes-stacked',
+      id: 'sec_office',
+      title: '辦公室',
+      icon: 'fas fa-building',
       color: 'from-blue-600/25 to-indigo-600/25 border-blue-500/30 text-blue-400',
-      title: '辦公器材箱',
-      desc: '器材箱(一)、器材箱(二)',
-      titles: ['裝備器材箱(一)', '裝備器材箱(二)']
+      badgeColor: 'text-blue-400 bg-blue-500/20 border-blue-500/30',
+      desc: '器材箱(一)(二)、電腦桌、無線電櫃、油卡',
+      sectionTitle: '辦公室'
     },
     {
-      id: 'blk_office_comms',
-      icon: 'fas fa-walkie-talkie',
+      id: 'sec_equipment_room',
+      title: '器材室',
+      icon: 'fas fa-warehouse',
+      color: 'from-cyan-600/25 to-teal-600/25 border-cyan-500/30 text-cyan-400',
+      badgeColor: 'text-cyan-400 bg-cyan-500/20 border-cyan-500/30',
+      desc: '可移動螢幕、Skydio X10、新樂飛、速創',
+      sectionTitle: '器材室'
+    },
+    {
+      id: 'sec_parking',
+      title: '1樓室外停車格',
+      icon: 'fas fa-square-parking',
       color: 'from-amber-600/25 to-orange-600/25 border-amber-500/30 text-amber-400',
-      title: '通訊與鑰匙',
-      desc: '筆電、無線電9支、平板、油卡',
-      titles: ['辦公室電腦桌', '  無線電櫃  ', '賜典抽屜']
+      badgeColor: 'text-amber-400 bg-amber-500/20 border-amber-500/30',
+      desc: '備勤車42車、西屯43車(帳棚/桌椅)',
+      sectionTitle: '1樓室外停車格'
     },
     {
-      id: 'blk_skydio',
-      icon: 'fas fa-satellite-dish',
-      color: 'from-cyan-600/25 to-blue-600/25 border-cyan-500/30 text-cyan-400',
-      title: 'Skydio X10',
-      desc: '主機、遙控器、電池3顆、配件',
-      titles: ['無人機SKYDIO X10 /【放置桌面上】 ']
-    },
-    {
-      id: 'blk_t4',
-      icon: 'fas fa-crosshairs',
-      color: 'from-emerald-600/25 to-teal-600/25 border-emerald-500/30 text-emerald-400',
-      title: '新樂飛雙機',
-      desc: 'T4-110、T4-100 主機及配件',
-      titles: ['新樂飛T4-110 /【放置桌面】 ', '新樂飛T4-100 /【放置桌下】 ']
-    },
-    {
-      id: 'blk_suchuang',
-      icon: 'fas fa-shield-halved',
-      color: 'from-purple-600/25 to-indigo-600/25 border-purple-500/30 text-purple-400',
-      title: '速創無人機',
-      desc: '八大、四大速創機體與配件',
-      titles: ['速創 /  【放置桌下】(第八大隊財產)', '速創 /  【放置桌下】(第四大隊財產)']
-    },
-    {
-      id: 'blk_vehicles',
-      icon: 'fas fa-truck-pickup',
-      color: 'from-rose-600/25 to-red-600/25 border-rose-500/30 text-rose-400',
-      title: '車輛發電機',
-      desc: 'LG螢幕、42/43備勤車、發電機',
-      titles: ['可移動式螢幕', '備勤車42車', '西屯備勤車43車(BCU-6167)', '發電機']
+      id: 'sec_basement',
+      title: '地下室',
+      icon: 'fas fa-bolt',
+      color: 'from-purple-600/25 to-rose-600/25 border-purple-500/30 text-purple-400',
+      badgeColor: 'text-purple-400 bg-purple-500/20 border-purple-500/30',
+      desc: 'HONDA EU22i 小型發電機',
+      sectionTitle: '地下室'
     }
   ];
 
   // 初始化程式
   function init() {
+    localStorage.removeItem('uav_custom_members'); // 自訂人員為一次性，不予持久保存
+    localStorage.removeItem('uav_custom_locations'); // 自訂地點為一次性，不予持久保存
+    localStorage.removeItem('uav_custom_coords'); // 自訂座標為一次性，不予持久保存
     applyTheme(state.theme);
     renderNavigation();
     switchForm(state.currentFormId);
@@ -194,12 +184,13 @@
     return t.includes('時:分') || t.includes('時間') && (t.includes('出勤') || t.includes('返隊') || t.includes('起飛') || t.includes('發生'));
   }
 
-  // 判斷是否為人員欄位
+  // 判斷是否為人員欄位（排除人員傷亡相關調查欄位）
   function isPersonField(item) {
     const t = item.title || '';
+    if (t.includes('傷亡')) return false;
     return (item.type === 'radio' || item.type === 'checkbox') && (
       t.includes('清點人員') || t.includes('出勤人員') || t.includes('通報人') || 
-      t.includes('操作人') || t.includes('填寫人') || t.includes('點收人') || t.includes('人員')
+      t.includes('操作人') || t.includes('填寫人') || t.includes('出借點收人') || t.includes('點收人')
     );
   }
 
@@ -302,7 +293,7 @@
     });
   }
 
-  // 渲染每日裝備清點特殊佈局 (置頂填寫 + 6格儀表板 + 備註)
+  // 渲染每日裝備清點特殊佈局 (置頂填寫 + 原生4大分區儀表板 + 備註)
   function renderInventorySpecialLayout(formEl, formConfig) {
     // 1. 置頂：清點日期與清點人員卡片
     const topCard = document.createElement('div');
@@ -330,20 +321,20 @@
     }
     formEl.appendChild(topCard);
 
-    // 2. 中間：6 大格戰術圖示卡片儀表板（手機一畫面 6 格）
+    // 2. 中間：依照原始表單分區（辦公室、器材室、1樓室外停車格、地下室）4 大格卡片
     const dashboardSection = document.createElement('div');
     dashboardSection.className = 'space-y-2';
     dashboardSection.innerHTML = `
       <div class="flex items-center justify-between px-1">
         <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-          <i class="fas fa-th-large text-amber-400"></i> 分區裝備清點（點擊格子開啟清點視窗）
+          <i class="fas fa-th-large text-amber-400"></i> 分區裝備清點（點擊分類開啟清點視窗）
         </span>
-        <span id="invGlobalCountBadge" class="text-[11px] font-mono text-slate-400">總進度：0 / 55 已清點</span>
+        <span id="invGlobalCountBadge" class="text-[11px] font-mono text-slate-400">總進度：0 / 56 已清點</span>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3" id="invDashboardGrid">
-        ${INVENTORY_BLOCKS.map(blk => `
+      <div class="grid grid-cols-2 gap-2.5 sm:gap-4" id="invDashboardGrid">
+        ${INVENTORY_SECTIONS.map(blk => `
           <div class="inv-grid-card glass-panel rounded-2xl p-3 sm:p-4 border border-slate-700/60 bg-gradient-to-br ${blk.color} relative overflow-hidden flex flex-col justify-between"
-               data-block-id="${blk.id}">
+               data-section-id="${blk.id}">
             <div class="flex items-start justify-between">
               <div class="w-9 h-9 rounded-xl bg-slate-900/60 border border-white/10 flex items-center justify-center text-lg">
                 <i class="${blk.icon}"></i>
@@ -353,12 +344,12 @@
               </span>
             </div>
             <div class="mt-2.5">
-              <h4 class="font-extrabold text-xs sm:text-sm text-slate-100">${blk.title}</h4>
-              <p class="text-[10px] text-slate-400 line-clamp-1 mt-0.5">${blk.desc}</p>
+              <h4 class="font-extrabold text-sm sm:text-base text-slate-100">${blk.title}</h4>
+              <p class="text-[10px] sm:text-xs text-slate-400 line-clamp-1 mt-0.5">${blk.desc}</p>
             </div>
-            <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] sm:text-xs text-slate-400 font-mono">
               <span class="blk-count">0 / 0</span>
-              <span class="text-amber-400 flex items-center gap-1 font-sans">點選清點 <i class="fas fa-chevron-right text-[8px]"></i></span>
+              <span class="text-amber-400 flex items-center gap-1 font-sans font-medium">開啟清點 <i class="fas fa-chevron-right text-[8px]"></i></span>
             </div>
           </div>
         `).join('')}
@@ -366,7 +357,7 @@
     `;
     formEl.appendChild(dashboardSection);
 
-    // 3. 將所有 6 大格內部裝備的隱藏 Radio 項目注入到 formEl（保證即使不開彈窗也能完整透過 form 提交）
+    // 3. 將所有裝備的隱藏 Radio 項目注入到 formEl（保證即使不開彈窗也能完整透過 form 提交）
     const hiddenRowsContainer = document.createElement('div');
     hiddenRowsContainer.id = 'invAllRowsContainer';
     hiddenRowsContainer.className = 'hidden'; // 隱藏於底層，資料由視窗同步
@@ -379,6 +370,7 @@
             const rowHolder = document.createElement('div');
             rowHolder.className = 'inventory-data-row';
             rowHolder.dataset.rowEntry = row.entryName;
+            rowHolder.dataset.secTitle = sec.title;
             rowHolder.dataset.gridTitle = it.title;
             rowHolder.dataset.rowLabel = row.label;
             rowHolder.innerHTML = `
@@ -520,22 +512,14 @@
               ${minutes.map(m => `<option value="${m}" ${m === curM ? 'selected' : ''}>${m} 分</option>`).join('')}
             </select>
           </div>
-          <button type="button" class="btn-now-time px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl border border-slate-700 transition flex items-center gap-1 whitespace-nowrap">
-            <i class="fas fa-clock text-amber-400"></i> 現在
-          </button>
         </div>
       `;
       return fieldContainer;
     }
 
-    // 2. 人員選擇欄位：提供 + 自訂新增選項
+    // 2. 人員選擇欄位：提供 + 自訂新增選項（自訂人員為當次填寫一次性，不予持久保留）
     if (isPersonField(item)) {
       const allMembers = [...item.options];
-      // 載入本機自訂名冊中尚未在預設名單中的姓名
-      state.customMembers.forEach(cm => {
-        if (!allMembers.includes(cm)) allMembers.push(cm);
-      });
-
       const isCheckbox = item.type === 'checkbox';
 
       fieldContainer.innerHTML = `
@@ -780,7 +764,6 @@
       const hSel = grp.querySelector('.time-hour-select');
       const mSel = grp.querySelector('.time-min-select');
       const hiddenInput = grp.querySelector('.time-combined-input');
-      const nowBtn = grp.querySelector('.btn-now-time');
 
       function updateTime() {
         if (hSel && mSel && hiddenInput) {
@@ -790,18 +773,6 @@
 
       if (hSel) hSel.addEventListener('change', updateTime);
       if (mSel) mSel.addEventListener('change', updateTime);
-
-      if (nowBtn) {
-        nowBtn.addEventListener('click', () => {
-          const now = new Date();
-          const curH = String(now.getHours()).padStart(2, '0');
-          const curM = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, '0');
-          if (hSel) hSel.value = curH;
-          if (mSel) mSel.value = curM;
-          updateTime();
-          showToast(`已設置為當前時間：${curH}:${curM}`);
-        });
-      }
     });
 
     // 3. 經緯度 GPS 定位按鈕
@@ -878,12 +849,12 @@
       });
     });
 
-    // 7. 每日清點 6 大格卡片點選開啟彈窗
+    // 7. 每日清點分區卡片點選開啟彈窗
     if (formConfig.id === 'inventory') {
       formEl.querySelectorAll('.inv-grid-card').forEach(card => {
         card.addEventListener('click', function () {
-          const blkId = this.dataset.blockId;
-          openInventorySectionModal(blkId, formEl);
+          const secId = this.dataset.sectionId;
+          openInventorySectionModal(secId, formEl);
         });
       });
 
@@ -892,7 +863,7 @@
       if (btnMarkAll) {
         btnMarkAll.addEventListener('click', () => {
           markAllInventoryItems(formEl, '已清點');
-          showToast('⚡ 已將全表單 55 項裝備全數標記為「已清點」！');
+          showToast('⚡ 已將全表單 56 項裝備全數標記為「已清點」！');
         });
       }
 
@@ -943,7 +914,7 @@
     }
   }
 
-  // 套用自訂經緯度
+  // 套用自訂經緯度（當次有效，一次性使用，送出或切換表單後即清除）
   function applyCustomCoordinate(formEl, entryName, coordValue) {
     const container = formEl.querySelector(`.coord-radio-container[data-entry-name="${entryName}"]`);
     if (!container) return;
@@ -952,24 +923,59 @@
     let chip = container.querySelector(`input[value="${coordValue}"]`);
     if (!chip) {
       const label = document.createElement('label');
-      label.className = 'choice-chip group';
+      label.className = 'choice-chip group active custom-added-chip border-emerald-500/50 bg-emerald-500/10';
+      label.setAttribute('data-is-custom', 'true');
       label.innerHTML = `
         <input type="radio" name="${entryName}" value="${escapeHtml(coordValue)}" checked>
         <span class="w-3.5 h-3.5 rounded-full border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
           <span class="dot w-1.5 h-1.5 rounded-full bg-white transition"></span>
         </span>
         <span class="text-emerald-400 font-mono font-bold">${escapeHtml(coordValue)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400 text-xs px-1" title="移除此自訂座標">
+          <i class="fas fa-times text-[10px]"></i>
+        </button>
       `;
       container.insertBefore(label, container.querySelector('.custom-coord-input').parentElement);
       chip = label.querySelector('input');
+
+      // 移除按鈕點擊
+      const removeBtn = label.querySelector('.btn-remove-custom-chip');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          label.remove();
+          showToast(`已移除自訂座標：${coordValue}`);
+        });
+      }
+
+      // 綁定點擊事件
+      chip.addEventListener('change', function () {
+        formEl.querySelectorAll(`input[name="${this.name}"]`).forEach(sibling => {
+          const c = sibling.closest('.choice-chip');
+          if (c) {
+            c.classList.remove('active');
+            const d = c.querySelector('.dot');
+            if (d) d.classList.replace('bg-white', 'bg-transparent');
+          }
+        });
+        label.classList.add('active');
+        const d = label.querySelector('.dot');
+        if (d) d.classList.replace('bg-transparent', 'bg-white');
+      });
     }
 
     chip.checked = true;
     chip.dispatchEvent(new Event('change', { bubbles: true }));
-    showToast(`📍 已成功選定座標：${coordValue}`);
+
+    // 清空輸入框
+    const input = container.querySelector('.custom-coord-input');
+    if (input) input.value = '';
+
+    showToast(`📍 已選定自訂座標：${coordValue}（當次有效，送出後即清除）`);
   }
 
-  // 套用自訂出勤地點
+  // 套用自訂出勤地點（當次有效，一次性使用，送出或切換表單後即清除）
   function applyCustomLocation(formEl, entryName, locationValue) {
     const container = formEl.querySelector(`.mission-loc-container[data-entry-name="${entryName}"]`);
     if (!container) return;
@@ -977,30 +983,60 @@
     let chip = container.querySelector(`input[value="${locationValue}"]`);
     if (!chip) {
       const label = document.createElement('label');
-      label.className = 'choice-chip group';
+      label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.setAttribute('data-is-custom', 'true');
       label.innerHTML = `
         <input type="radio" name="${entryName}" value="${escapeHtml(locationValue)}" checked>
         <span class="w-3.5 h-3.5 rounded-full border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
           <span class="dot w-1.5 h-1.5 rounded-full bg-white transition"></span>
         </span>
         <span class="text-amber-400 font-bold">${escapeHtml(locationValue)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400 text-xs px-1" title="移除此自訂地點">
+          <i class="fas fa-times text-[10px]"></i>
+        </button>
       `;
       container.insertBefore(label, container.querySelector('.custom-location-input').parentElement);
       chip = label.querySelector('input');
+
+      // 移除按鈕點擊
+      const removeBtn = label.querySelector('.btn-remove-custom-chip');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          label.remove();
+          showToast(`已移除自訂地點：${locationValue}`);
+        });
+      }
+
+      // 綁定點擊事件
+      chip.addEventListener('change', function () {
+        formEl.querySelectorAll(`input[name="${this.name}"]`).forEach(sibling => {
+          const c = sibling.closest('.choice-chip');
+          if (c) {
+            c.classList.remove('active');
+            const d = c.querySelector('.dot');
+            if (d) d.classList.replace('bg-white', 'bg-transparent');
+          }
+        });
+        label.classList.add('active');
+        const d = label.querySelector('.dot');
+        if (d) d.classList.replace('bg-transparent', 'bg-white');
+      });
     }
 
     chip.checked = true;
     chip.dispatchEvent(new Event('change', { bubbles: true }));
-    showToast(`🏢 已成功選定自訂地點：${locationValue}`);
+
+    // 清空輸入框
+    const input = container.querySelector('.custom-location-input');
+    if (input) input.value = '';
+
+    showToast(`🏢 已選定自訂地點：${locationValue}（當次有效，送出後即清除）`);
   }
 
-  // 新增自訂人員
+  // 新增自訂人員（僅在當次填寫表單有效，一次性使用，送出或切換表單後即清除）
   function addCustomPersonToForm(formEl, entryName, inputType, name) {
-    if (!state.customMembers.includes(name)) {
-      state.customMembers.push(name);
-      localStorage.setItem('uav_custom_members', JSON.stringify(state.customMembers));
-    }
-
     const container = formEl.querySelector(`.person-chips-container[data-entry-name="${entryName}"]`);
     if (!container) return;
 
@@ -1008,16 +1044,31 @@
     if (!chip) {
       const isCheckbox = inputType === 'checkbox';
       const label = document.createElement('label');
-      label.className = 'choice-chip group active';
+      label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.setAttribute('data-is-custom', 'true');
       label.innerHTML = `
         <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
         <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center transition">
           ${isCheckbox ? '<i class="fas fa-check text-[9px] text-white transition"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white transition"></span>'}
         </span>
         <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400 text-xs px-1" title="移除此自訂人員">
+          <i class="fas fa-times text-[10px]"></i>
+        </button>
       `;
       container.appendChild(label);
       chip = label.querySelector('input');
+
+      // 移除按鈕點擊
+      const removeBtn = label.querySelector('.btn-remove-custom-chip');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          label.remove();
+          showToast(`已移除自訂人員：${name}`);
+        });
+      }
 
       // 綁定點擊事件
       chip.addEventListener('change', function () {
@@ -1046,7 +1097,7 @@
     }
 
     chip.checked = true;
-    showToast(`👤 已新增並選取人員：${name}`);
+    showToast(`👤 已新增並選取人員：${name}（當次有效，送出後即清除）`);
   }
 
   // 智慧連動：地點對應座標
@@ -1070,12 +1121,15 @@
   }
 
   // ==========================================
-  // 每日裝備清點：6 大格儀表板彈窗與狀態同步核心
+  // 每日裝備清點：原生分區儀表板彈窗與狀態同步核心
   // ==========================================
 
-  // 打開特定區塊的詳細清點視窗
-  function openInventorySectionModal(blockId, formEl) {
-    const blk = INVENTORY_BLOCKS.find(b => b.id === blockId);
+  // 打開特定分區（辦公室、器材室、1樓室外停車格、地下室）詳細清點視窗
+  function openInventorySectionModal(sectionId, formEl) {
+    formEl = formEl || document.getElementById('active_form_inventory');
+    if (!formEl) return;
+
+    const blk = INVENTORY_SECTIONS.find(b => b.id === sectionId);
     if (!blk) return;
 
     state.activeInventoryBlock = blk;
@@ -1083,44 +1137,59 @@
     elements.secModalSub.innerText = blk.desc;
     elements.secModalIcon.innerHTML = `<i class="${blk.icon}"></i>`;
 
-    // 收集所有屬於此區塊的裝備列
-    const allRows = formEl.querySelectorAll('.inventory-data-row');
-    const matchedRows = [];
-    allRows.forEach(row => {
-      const gTitle = row.dataset.gridTitle || '';
-      if (blk.titles.some(t => gTitle.includes(t.trim()))) {
-        matchedRows.push(row);
+    const formConfig = window.FORMS_DATA.forms.find(f => f.id === 'inventory');
+    const targetSection = formConfig ? formConfig.sections.find(s => s.title === blk.sectionTitle) : null;
+    if (!targetSection) return;
+
+    // 依照原始方式：按次分類 (裝備器材箱(一)、裝備器材箱(二)、辦公室電腦桌、無線電櫃、賜典抽屜...) 逐一子區塊卡片渲染
+    let html = '';
+    const sectionRows = [];
+
+    targetSection.items.forEach(it => {
+      if (it.type === 'grid' && it.rows) {
+        html += `
+          <div class="sub-grid-box rounded-2xl p-3 sm:p-4 bg-slate-900/80 border border-slate-800 space-y-2.5 shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+              <span class="text-xs sm:text-sm font-extrabold text-slate-200 flex items-center gap-2">
+                <i class="fas fa-folder-open text-amber-400 text-xs"></i>
+                ${escapeHtml(it.title)} <span class="text-red-500 font-bold">*</span>
+              </span>
+            </div>
+            <div class="space-y-2">
+              ${it.rows.map(row => {
+                const targetRowEl = formEl.querySelector(`.inventory-data-row[data-row-entry="${row.entryName}"]`);
+                if (targetRowEl) sectionRows.push(targetRowEl);
+                const checkedInput = targetRowEl ? targetRowEl.querySelector('input:checked') : null;
+                const currentVal = checkedInput ? checkedInput.value : '';
+
+                return `
+                  <div class="modal-inv-item-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/40" data-row-entry="${row.entryName}">
+                    <span class="text-xs sm:text-sm font-medium text-slate-200 flex items-center gap-2">
+                      <i class="fas fa-cube text-slate-500 text-xs"></i>
+                      ${escapeHtml(row.label)}
+                    </span>
+                    <div class="flex items-center gap-1.5 self-end sm:self-auto">
+                      ${['已清點', '有異常', '出借'].map(opt => `
+                        <button type="button" class="btn-modal-opt px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-slate-700/60 ${
+                          currentVal === opt 
+                            ? (opt === '已清點' ? 'bg-emerald-600 text-white shadow-md' : (opt === '有異常' ? 'bg-rose-600 text-white shadow-md' : 'bg-amber-600 text-white shadow-md'))
+                            : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                        }" data-opt="${opt}">
+                          ${opt === '已清點' ? '<i class="fas fa-check text-[10px]"></i>' : (opt === '有異常' ? '<i class="fas fa-triangle-exclamation text-[10px]"></i>' : '<i class="fas fa-handshake text-[10px]"></i>')}
+                          ${opt}
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
       }
     });
 
-    // 渲染清單至 Modal
-    elements.secModalItemsList.innerHTML = matchedRows.map(r => {
-      const entryName = r.dataset.rowEntry;
-      const label = r.dataset.rowLabel;
-      const checkedInput = r.querySelector('input:checked');
-      const currentVal = checkedInput ? checkedInput.value : '';
-
-      return `
-        <div class="modal-inv-item-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800" data-row-entry="${entryName}">
-          <span class="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
-            <i class="fas fa-cube text-slate-500 text-xs"></i>
-            ${escapeHtml(label)}
-          </span>
-          <div class="flex items-center gap-1.5 self-end sm:self-auto">
-            ${['已清點', '有異常', '出借'].map(opt => `
-              <button type="button" class="btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-slate-700/60 ${
-                currentVal === opt 
-                  ? (opt === '已清點' ? 'bg-emerald-600 text-white shadow-md' : (opt === '有異常' ? 'bg-rose-600 text-white shadow-md' : 'bg-amber-600 text-white shadow-md'))
-                  : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
-              }" data-opt="${opt}">
-                ${opt === '已清點' ? '<i class="fas fa-check text-[10px]"></i>' : (opt === '有異常' ? '<i class="fas fa-triangle-exclamation text-[10px]"></i>' : '<i class="fas fa-handshake text-[10px]"></i>')}
-                ${opt}
-              </button>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
+    elements.secModalItemsList.innerHTML = html;
 
     // 綁定按鈕點擊更新
     elements.secModalItemsList.querySelectorAll('.btn-modal-opt').forEach(btn => {
@@ -1137,36 +1206,34 @@
 
         // 更新 Modal 上的樣式
         rowWrap.querySelectorAll('.btn-modal-opt').forEach(b => {
-          b.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-slate-700/60 bg-slate-800/80 text-slate-400 hover:text-slate-200';
+          b.className = 'btn-modal-opt px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-slate-700/60 bg-slate-800/80 text-slate-400 hover:text-slate-200';
         });
 
         if (opt === '已清點') {
-          this.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-emerald-500 bg-emerald-600 text-white shadow-md';
+          this.className = 'btn-modal-opt px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-emerald-500 bg-emerald-600 text-white shadow-md';
         } else if (opt === '有異常') {
-          this.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-rose-500 bg-rose-600 text-white shadow-md';
+          this.className = 'btn-modal-opt px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-rose-500 bg-rose-600 text-white shadow-md';
         } else if (opt === '出借') {
-          this.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-amber-500 bg-amber-600 text-white shadow-md';
+          this.className = 'btn-modal-opt px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border border-amber-500 bg-amber-600 text-white shadow-md';
         }
 
-        updateModalProgress(matchedRows);
+        updateModalProgress(sectionRows);
         updateInventoryBlockBadge(blk, formEl);
       });
     });
 
     // 視窗內「⚡ 全數正常」按鈕
     elements.btnSecQuickAll.onclick = () => {
-      matchedRows.forEach(r => {
+      sectionRows.forEach(r => {
         const radio = r.querySelector('input[value="已清點"]');
         if (radio) radio.checked = true;
       });
-      // 重新渲染 Modal 按鈕樣式
-      openInventorySectionModal(blockId, formEl);
+      openInventorySectionModal(sectionId, formEl);
       updateInventoryBlockBadge(blk, formEl);
       showToast(`⚡ 已將【${blk.title}】全數標記為已清點！`);
     };
 
-    updateModalProgress(matchedRows);
-
+    updateModalProgress(sectionRows);
     elements.inventorySectionModal.classList.remove('hidden');
     elements.inventorySectionModal.classList.add('flex');
   }
@@ -1189,15 +1256,10 @@
 
   // 更新單一卡片進度與徽章
   function updateInventoryBlockBadge(blk, formEl) {
-    const card = formEl.querySelector(`.inv-grid-card[data-block-id="${blk.id}"]`);
+    const card = formEl.querySelector(`.inv-grid-card[data-section-id="${blk.id}"]`);
     if (!card) return;
 
-    const allRows = formEl.querySelectorAll('.inventory-data-row');
-    const matched = [];
-    allRows.forEach(row => {
-      const gTitle = row.dataset.gridTitle || '';
-      if (blk.titles.some(t => gTitle.includes(t.trim()))) matched.push(row);
-    });
+    const matched = formEl.querySelectorAll(`.inventory-data-row[data-sec-title="${blk.sectionTitle}"]`);
 
     let checkedCount = 0;
     let hasIssue = false;
@@ -1216,7 +1278,6 @@
     const countSpan = card.querySelector('.blk-count');
 
     countSpan.innerText = `${checkedCount} / ${matched.length}`;
-
     card.classList.remove('all-checked', 'has-issue', 'has-borrow');
 
     if (hasIssue) {
@@ -1239,9 +1300,9 @@
     updateGlobalInventoryCount(formEl);
   }
 
-  // 更新所有 6 格卡片狀態
+  // 更新所有 4 格分區卡片狀態
   function updateAllInventoryBlockBadges(formEl) {
-    INVENTORY_BLOCKS.forEach(blk => updateInventoryBlockBadge(blk, formEl));
+    INVENTORY_SECTIONS.forEach(blk => updateInventoryBlockBadge(blk, formEl));
   }
 
   // 更新全域已清點進度數字
@@ -1345,7 +1406,7 @@
       summaryItems.push({ label: '表單類型', val: formConfig.title });
       summaryItems.push({ label: '清點日期', val: formData.get('entry.358359977') });
       summaryItems.push({ label: '清點人員', val: formData.get('entry.758490419') });
-      summaryItems.push({ label: '裝備清點項數', val: '55 項裝備已全數核對完成' });
+      summaryItems.push({ label: '裝備清點項數', val: '56 項裝備已全數核對完成' });
     } else if (formConfig.id === 'mission') {
       summaryItems.push({ label: '表單類型', val: formConfig.title });
       summaryItems.push({ label: '出勤單號', val: formData.get('entry.316344842') });
@@ -1378,7 +1439,7 @@
       </div>
       <div class="mt-3 p-2.5 rounded-xl bg-red-950/30 border border-red-500/20 text-[11px] text-red-300 flex items-center gap-2">
         <i class="fas fa-info-circle text-red-400"></i>
-        <span>確認內容無誤後，請點選「確認送出」即時同步至雲端後台。</span>
+        <span>確認內容無誤後，請點選「確認送出」送出表單。</span>
       </div>
     `;
 
@@ -1442,6 +1503,9 @@
       state.history.unshift(record);
       localStorage.setItem('uav_history', JSON.stringify(state.history.slice(0, 30)));
 
+      // 送出表單後，立即清除當次表單的所有填寫內容與一次性自訂項目（人員、地點、座標等）
+      resetAndPrepareNextForm();
+
       // 800ms 後顯示成功視窗
       setTimeout(() => {
         elements.loadingOverlay.classList.add('hidden');
@@ -1455,6 +1519,12 @@
       elements.loadingOverlay.classList.remove('flex');
       showToast('⚠️ 提交發生錯誤，請重試或前往官方表單。', 'error');
     }
+  }
+
+  // 重設並準備全新表單（清除一次性自訂人員、地點及座標等）
+  function resetAndPrepareNextForm() {
+    const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
+    if (formConfig) renderFormFields(formConfig);
   }
 
   // 成功彈窗展示
@@ -1564,19 +1634,32 @@
       elements.inventorySectionModal.classList.remove('flex');
     });
 
-    // 成功視窗關閉與下一筆
+    // 點擊背景遮罩關閉視窗
+    [elements.inventorySectionModal, elements.confirmModal, elements.historyModal, elements.successModal].forEach(modal => {
+      if (modal) {
+        modal.addEventListener('click', e => {
+          if (e.target === modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            if (modal === elements.successModal) {
+              resetAndPrepareNextForm();
+            }
+          }
+        });
+      }
+    });
+
+    // 成功視窗按鈕關閉與下一筆（清除一次性自訂人員及地點）
     elements.successModalClose.addEventListener('click', () => {
       elements.successModal.classList.add('hidden');
       elements.successModal.classList.remove('flex');
+      resetAndPrepareNextForm();
     });
 
     elements.successNextBtn.addEventListener('click', () => {
       elements.successModal.classList.add('hidden');
       elements.successModal.classList.remove('flex');
-      const activeForm = document.getElementById(`active_form_${state.currentFormId}`);
-      if (activeForm) activeForm.reset();
-      const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
-      if (formConfig) renderFormFields(formConfig);
+      resetAndPrepareNextForm();
       showToast('已重設為全新表單，可繼續填寫下一筆！');
     });
   }
