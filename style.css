@@ -235,6 +235,42 @@ body.tactical-light {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
 }
 
+.status-pill-btn.btn-borrow.active {
+  background: #f59e0b;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+/* 每日裝備清點 6格戰術圖示卡片 */
+.inv-grid-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.inv-grid-card:hover {
+  transform: translateY(-2px);
+}
+
+.inv-grid-card:active {
+  transform: scale(0.97);
+}
+
+.inv-grid-card.all-checked {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  background: rgba(6, 78, 59, 0.25) !important;
+}
+
+.inv-grid-card.has-issue {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  background: rgba(136, 19, 55, 0.25) !important;
+}
+
+.inv-grid-card.has-borrow {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  background: rgba(120, 53, 15, 0.25) !important;
+}
+
 /* 頂部 Tab 按鈕微互動 */
 .form-tab-btn {
   position: relative;
