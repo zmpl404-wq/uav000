@@ -33,7 +33,6 @@
     historyList: document.getElementById('historyList'),
     tabNavContainer: document.getElementById('tabNavContainer'),
     mobileNavContainer: document.getElementById('mobileNavContainer'),
-    formHeaderTitle: document.getElementById('formHeaderTitle'),
     formBadge: document.getElementById('formBadge'),
     formOfficialLink: document.getElementById('formOfficialLink'),
     formRenderArea: document.getElementById('formRenderArea'),
@@ -52,7 +51,11 @@
     areaModalContent: document.getElementById('areaModalContent'),
     areaModalMarkAllBtn: document.getElementById('areaModalMarkAllBtn'),
     areaModalCloseBtn: document.getElementById('areaModalCloseBtn'),
-    areaModalSaveBtn: document.getElementById('areaModalSaveBtn')
+    areaModalSaveBtn: document.getElementById('areaModalSaveBtn'),
+    confirmModal: document.getElementById('confirmModal'),
+    confirmModalDesc: document.getElementById('confirmModalDesc'),
+    confirmCancelBtn: document.getElementById('confirmCancelBtn'),
+    confirmSubmitBtn: document.getElementById('confirmSubmitBtn')
   };
 
   // 初始化
@@ -123,8 +126,7 @@
       }`;
     });
 
-    // 簡潔標題設定 (無副標題)
-    elements.formHeaderTitle.innerText = formConfig.title;
+    // 更新 Badge 與官方連結
     elements.formBadge.innerText = formConfig.badge;
     elements.formOfficialLink.href = formConfig.viewUrl;
 
@@ -978,6 +980,7 @@
   // =========================================================================
   // 4. 表單提交處理 (單一通道精確送出，絕不重複第二筆，完整記錄內容)
   // =========================================================================
+  // 第一步：按下送出鍵 → 驗證 → 開啟確認對話框
   function handleFormSubmit() {
     const activeForm = document.getElementById(`active_form_${state.currentFormId}`);
     if (!activeForm) return;
@@ -985,22 +988,44 @@
     const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
     if (!formConfig) return;
 
+    // 每日清點：先確保隱藏 inputs 完整同步
+    if (formConfig.id === 'inventory') {
+      syncInventoryToHiddenInputs(formConfig);
+    }
+
     // 必填驗證
     if (!validateActiveForm(activeForm, formConfig)) {
       return;
     }
 
-    // 每日清點表單：再次確保隱藏 inputs 完整生成
+    // 開啟確認視窗
+    elements.confirmModalDesc.innerText = `即將送出「${formConfig.badge}」表單，資料送出後不可復原，請確認填寫正確後按下確認送出。`;
+    elements.confirmModal.classList.remove('hidden');
+    elements.confirmModal.classList.add('flex');
+  }
+
+  // 第二步：確認對話框按「確認送出」→ 實際執行送出
+  function doActualSubmit() {
+    // 關閉確認視窗
+    elements.confirmModal.classList.add('hidden');
+    elements.confirmModal.classList.remove('flex');
+
+    const activeForm = document.getElementById(`active_form_${state.currentFormId}`);
+    if (!activeForm) return;
+
+    const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
+    if (!formConfig) return;
+
+    // 每日清點：送出前再次確保隱藏 inputs 完整生成
     if (formConfig.id === 'inventory') {
       syncInventoryToHiddenInputs(formConfig);
     }
 
-    // 顯示全螢幕科技遮罩
+    // 顯示全螢幕載入遮罩
     elements.loadingOverlay.classList.remove('hidden');
     elements.loadingOverlay.classList.add('flex');
 
-    // 處理 Date 與 Time 的 Google 專屬附加參數 (year, month, day, hour, minute)
-    // 直接動態插入隱藏 input，確保原汁原味隨 activeForm.submit() 送出！
+    // 清除舊的分割 hidden fields，重新插入
     activeForm.querySelectorAll('.auto-generated-split-field').forEach(el => el.remove());
 
     const formData = new FormData(activeForm);
@@ -1010,7 +1035,7 @@
       if (!value) continue;
       summaryData[key] = value;
 
-      // 日期自動拆解
+      // 日期自動拆解 (Google Forms 需要)
       if (key.startsWith('entry.') && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
         const parts = value.split('-');
         appendHiddenField(activeForm, `${key}_year`, parts[0]);
@@ -1018,7 +1043,7 @@
         appendHiddenField(activeForm, `${key}_day`, String(parseInt(parts[2], 10)));
       }
 
-      // 時間自動拆解
+      // 時間自動拆解 (Google Forms 需要)
       if (key.startsWith('entry.') && /^\d{2}:\d{2}$/.test(value)) {
         const parts = value.split(':');
         appendHiddenField(activeForm, `${key}_hour`, String(parseInt(parts[0], 10)));
@@ -1027,8 +1052,7 @@
     }
 
     try {
-      // ★ 核心保證：只使用 activeForm.submit() 單一原生通道送出至隱藏 iframe！
-      // 杜絕了重複觸發 fetch 導致後台記錄兩筆的問題！
+      // ★ 單一原生通道送出至隱藏 iframe，杜絕重複記錄
       activeForm.submit();
 
       // 本機紀錄備存
@@ -1155,6 +1179,13 @@
     });
 
     elements.submitBtn.addEventListener('click', handleFormSubmit);
+
+    // 送出確認視窗事件
+    elements.confirmCancelBtn.addEventListener('click', () => {
+      elements.confirmModal.classList.add('hidden');
+      elements.confirmModal.classList.remove('flex');
+    });
+    elements.confirmSubmitBtn.addEventListener('click', doActualSubmit);
 
     elements.successModalClose.addEventListener('click', () => {
       elements.successModal.classList.add('hidden');
