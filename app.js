@@ -97,6 +97,7 @@
     localStorage.removeItem('uav_custom_members'); // 自訂人員為一次性，不予持久保存
     localStorage.removeItem('uav_custom_locations'); // 自訂地點為一次性，不予持久保存
     localStorage.removeItem('uav_custom_coords'); // 自訂座標為一次性，不予持久保存
+    localStorage.removeItem('uav_custom_drones'); // 自訂無人機為一次性，不予持久保存
     applyTheme(state.theme);
     renderNavigation();
     switchForm(state.currentFormId);
@@ -620,6 +621,38 @@
       return fieldContainer;
     }
 
+    // 4.5 借出表單：無人機機體 (增加一次性自訂選項)
+    if (formConfig.id === 'borrow' && item.title.includes('無人機機體')) {
+      fieldContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <label class="block text-xs sm:text-sm font-semibold text-slate-200">
+            ${escapeHtml(item.title)} ${reqTag}
+          </label>
+          <button type="button" class="btn-add-custom-drone text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition" data-entry-name="${item.entryName}">
+            <i class="fas fa-plus text-[11px]"></i> 新增自訂機體
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-1 drone-chips-container" data-entry-name="${item.entryName}">
+          ${item.options.map(opt => `
+            <label class="choice-chip group">
+              <input type="checkbox" name="${item.entryName}" value="${escapeHtml(opt)}">
+              <span class="w-3.5 h-3.5 rounded-md border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
+                <i class="fas fa-check text-[9px] text-transparent transition"></i>
+              </span>
+              <span>${escapeHtml(opt)}</span>
+            </label>
+          `).join('')}
+          <div class="w-full flex items-center gap-2 mt-1">
+            <input type="text" placeholder="自訂機體/序號：例 DJI Matrice 350 或其他機型" class="tactical-input flex-1 text-xs custom-drone-input" data-for-entry="${item.entryName}">
+            <button type="button" class="btn-apply-custom-drone px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">
+              帶入自訂
+            </button>
+          </div>
+        </div>
+      `;
+      return fieldContainer;
+    }
+
     // 5. 出勤地點欄位 (增加 + 自訂地點)
     if (formConfig.id === 'mission' && item.title.includes('出勤地點') && item.type === 'radio') {
       fieldContainer.innerHTML = `
@@ -846,6 +879,27 @@
       });
     });
 
+    // 5.1 借出表單：自訂無人機機體按鈕與輸入框
+    formEl.querySelectorAll('.btn-apply-custom-drone').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const input = this.parentElement.querySelector('.custom-drone-input');
+        if (input && input.value.trim()) {
+          const entryName = input.dataset.forEntry;
+          applyCustomDrone(formEl, entryName, input.value.trim());
+        }
+      });
+    });
+
+    formEl.querySelectorAll('.btn-add-custom-drone').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const entryName = this.dataset.entryName;
+        const name = prompt('請輸入自訂無人機型號或序號（例：DJI Matrice 350）：');
+        if (name && name.trim()) {
+          applyCustomDrone(formEl, entryName, name.trim());
+        }
+      });
+    });
+
     // 6. 新增自訂人員按鈕
     formEl.querySelectorAll('.btn-add-custom-person').forEach(btn => {
       btn.addEventListener('click', function () {
@@ -1042,6 +1096,66 @@
     if (input) input.value = '';
 
     showToast(`🏢 已選定自訂地點：${locationValue}（當次有效，送出後即清除）`);
+  }
+
+  // 套用自訂無人機機體（當次有效，一次性使用，送出或切換表單後即清除）
+  function applyCustomDrone(formEl, entryName, droneValue) {
+    const container = formEl.querySelector(`.drone-chips-container[data-entry-name="${entryName}"]`);
+    if (!container) return;
+
+    let chip = container.querySelector(`input[value="${droneValue}"]`);
+    if (!chip) {
+      const label = document.createElement('label');
+      label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.setAttribute('data-is-custom', 'true');
+      label.innerHTML = `
+        <input type="checkbox" name="${entryName}" value="${escapeHtml(droneValue)}" checked>
+        <span class="w-3.5 h-3.5 rounded-md border border-slate-500 mr-1.5 flex items-center justify-center transition">
+          <i class="fas fa-check text-[9px] text-white transition"></i>
+        </span>
+        <span class="text-amber-300 font-bold">${escapeHtml(droneValue)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400 text-xs px-1" title="移除此自訂機體">
+          <i class="fas fa-times text-[10px]"></i>
+        </button>
+      `;
+      container.insertBefore(label, container.querySelector('.custom-drone-input').parentElement);
+      chip = label.querySelector('input');
+
+      // 移除按鈕點擊
+      const removeBtn = label.querySelector('.btn-remove-custom-chip');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          label.remove();
+          showToast(`已移除自訂機體：${droneValue}`);
+        });
+      }
+
+      // 綁定點擊事件
+      chip.addEventListener('change', function () {
+        if (this.checked) {
+          label.classList.add('active');
+          label.querySelector('i')?.classList.replace('text-transparent', 'text-white');
+        } else {
+          label.classList.remove('active');
+          label.querySelector('i')?.classList.replace('text-white', 'text-transparent');
+        }
+        handleDroneBorrowAutoFill(formEl);
+      });
+    }
+
+    chip.checked = true;
+    chip.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // 清空輸入框
+    const input = container.querySelector('.custom-drone-input');
+    if (input) input.value = '';
+
+    // 自動帶入標配件（機體*1、遙控器*1、充電器*1、電池*3）
+    handleDroneBorrowAutoFill(formEl);
+
+    showToast(`🚁 已新增自訂機體：${droneValue}（當次有效，送出後即清除）`);
   }
 
   // 新增自訂人員（僅在當次填寫表單有效，一次性使用，送出或切換表單後即清除）
