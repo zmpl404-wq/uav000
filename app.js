@@ -455,7 +455,8 @@
           <div class="inventory-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl bg-slate-800/30 border border-slate-700/40" data-row-entry="${row.entryName}">
             <span class="text-xs sm:text-sm font-medium text-slate-300 flex items-center gap-2">
               <i class="fas fa-cube text-slate-500 text-xs"></i>
-              ${escapeHtml(row.label)}${row.required ? '<span class="text-red-500">*</span>' : ''}
+              ${escapeHtml(row.label)}
+              ${row.required ? '<span class="text-red-500">*</span>' : ''}
             </span>
             <div class="status-pill-group self-end sm:self-auto flex items-center gap-1">
               ${['已清點', '有異常', '出借'].map(opt => `
@@ -486,7 +487,7 @@
     const fieldContainer = document.createElement('div');
     fieldContainer.className = 'space-y-1.5';
 
-    // 1. 時間欄位：下拉式選單 (時、分移至數字後方，以1分鐘為單位)
+    // 1. 時間欄位：下拉式選單
     if (isTimeField(item)) {
       const now = new Date();
       const curH = String(now.getHours()).padStart(2, '0');
@@ -547,7 +548,7 @@
       return fieldContainer;
     }
 
-    // 3. 任務內容欄位（已修復：支援按鈕新增自訂任務，參照自訂人員格式）
+    // 3. 任務內容欄位（已加入新增自訂任務按鈕，參照自訂人員方式）
     if (isTaskField(item)) {
       const allTasks = [...item.options];
       const isCheckbox = item.type === 'checkbox';
@@ -679,7 +680,7 @@
             </label>
           `).join('')}
           <div class="w-full flex items-center gap-2 mt-1">
-            <input type="text" placeholder="自訂地點..." class="tactical-input flex-1 text-xs custom-loc-input" data-for-entry="${item.entryName}">
+            <input type="text" placeholder="自訂地點..." class="tactical-input flex-1 text-xs custom-location-input" data-for-entry="${item.entryName}">
             <button type="button" class="btn-apply-custom-loc px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">帶入自訂</button>
           </div>
         </div>
@@ -687,190 +688,223 @@
       return fieldContainer;
     }
 
-    if (item.type === 'radio' || item.type === 'checkbox') {
-      const isCheckbox = item.type === 'checkbox';
-      fieldContainer.innerHTML = `
-        <label class="block text-xs sm:text-sm font-semibold text-slate-200 mb-1">
-          ${escapeHtml(item.title)} ${reqTag}
-        </label>
-        <div class="flex flex-wrap gap-2 pt-1">
-          ${item.options.map(opt => `
-            <label class="choice-chip group">
-              <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
-              <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
-                ${isCheckbox ? '<i class="fas fa-check text-[9px] text-transparent transition"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-transparent transition"></span>'}
-              </span>
-              <span>${escapeHtml(opt)}</span>
-            </label>
-          `).join('')}
-        </div>
-      `;
-      return fieldContainer;
-    }
-
-    if (item.type === 'textarea') {
-      fieldContainer.innerHTML = `
-        <label class="block text-xs sm:text-sm font-semibold text-slate-200">
-          ${escapeHtml(item.title)} ${reqTag}
-        </label>
-        <textarea name="${item.entryName}" rows="3" ${isReq ? 'required' : ''} placeholder="請詳細填寫..." class="tactical-input text-sm resize-none"></textarea>
-      `;
-      return fieldContainer;
+    let inputHtml = '';
+    switch (item.type) {
+      case 'textarea':
+        inputHtml = `<textarea name="${item.entryName}" rows="3" ${isReq ? 'required' : ''} placeholder="${escapeHtml(item.description || '請輸入詳細說明...')}" class="tactical-input text-xs sm:text-sm"></textarea>`;
+        break;
+      case 'select':
+        inputHtml = `<select name="${item.entryName}" ${isReq ? 'required' : ''} class="tactical-input cursor-pointer text-xs sm:text-sm"><option value="">-- 請選擇項目 --</option>${item.options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('')}</select>`;
+        break;
+      case 'radio':
+        inputHtml = `<div class="flex flex-wrap gap-2 pt-1">${item.options.map(opt => `<label class="choice-chip group"><input type="radio" name="${item.entryName}" value="${escapeHtml(opt)}"><span class="w-3.5 h-3.5 rounded-full border border-slate-500 mr-1.5 flex items-center justify-center transition"><span class="dot w-1.5 h-1.5 rounded-full bg-transparent transition"></span></span><span>${escapeHtml(opt)}</span></label>`).join('')}</div>`;
+        break;
+      case 'checkbox':
+        inputHtml = `<div class="flex flex-wrap gap-2 pt-1">${item.options.map(opt => `<label class="choice-chip group"><input type="checkbox" name="${item.entryName}" value="${escapeHtml(opt)}"><span class="w-3.5 h-3.5 rounded-md border border-slate-500 mr-1.5 flex items-center justify-center transition"><i class="fas fa-check text-[9px] text-transparent transition"></i></span><span>${escapeHtml(opt)}</span></label>`).join('')}</div>`;
+        break;
+      case 'text':
+      default:
+        let placeholder = escapeHtml(item.description || '請輸入...');
+        inputHtml = `<input type="text" name="${item.entryName}" ${isReq ? 'required' : ''} placeholder="${placeholder}" class="tactical-input text-xs sm:text-sm">`;
+        break;
     }
 
     fieldContainer.innerHTML = `
       <label class="block text-xs sm:text-sm font-semibold text-slate-200">
         ${escapeHtml(item.title)} ${reqTag}
       </label>
-      <input type="text" name="${item.entryName}" ${isReq ? 'required' : ''} placeholder="請輸入..." class="tactical-input text-sm">
+      ${item.description && item.type !== 'textarea' ? `<p class="text-xs text-slate-400">${escapeHtml(item.description)}</p>` : ''}
+      ${inputHtml}
     `;
     return fieldContainer;
   }
 
   function bindDynamicFormEvents(formEl, formConfig) {
-    formEl.addEventListener('change', (e) => {
-      const target = e.target;
-      if (target.classList.contains('grid-radio') || target.type === 'radio' || target.type === 'checkbox') {
-        const name = target.name;
-        if (target.type === 'radio') {
-          formEl.querySelectorAll(`input[name="${name}"]`).forEach(inp => {
-            const chip = inp.closest('.choice-chip');
+    formEl.querySelectorAll('.choice-chip input').forEach(input => {
+      input.addEventListener('change', function () {
+        if (this.type === 'radio') {
+          formEl.querySelectorAll(`input[name="${this.name}"]`).forEach(sibling => {
+            const chip = sibling.closest('.choice-chip');
             if (chip) {
-              if (inp.checked) chip.classList.add('active');
-              else chip.classList.remove('active');
+              chip.classList.remove('active');
+              const dot = chip.querySelector('.dot');
+              if (dot) dot.classList.replace('bg-white', 'bg-transparent');
             }
           });
-        } else if (target.type === 'checkbox') {
-          const chip = target.closest('.choice-chip');
-          if (chip) {
-            if (target.checked) chip.classList.add('active');
-            else chip.classList.remove('active');
+          const currentChip = this.closest('.choice-chip');
+          if (currentChip) {
+            currentChip.classList.add('active');
+            const dot = currentChip.querySelector('.dot');
+            if (dot) dot.classList.replace('bg-transparent', 'bg-white');
+          }
+          if (formConfig.id === 'mission' && this.name.includes('1591612449')) {
+            syncCoordinatesByLocation(formEl, this.value);
+          }
+        } else if (this.type === 'checkbox') {
+          const chip = this.closest('.choice-chip');
+          const checkIcon = chip.querySelector('i');
+          if (this.checked) {
+            chip.classList.add('active');
+            if (checkIcon) checkIcon.classList.replace('text-transparent', 'text-white');
+          } else {
+            chip.classList.remove('active');
+            if (checkIcon) checkIcon.classList.replace('text-white', 'text-transparent');
+          }
+          if (formConfig.id === 'borrow' && this.name.includes('1253125050')) {
+            handleDroneBorrowAutoFill(formEl);
           }
         }
+      });
+    });
+
+    formEl.querySelectorAll('.time-dropdown-group').forEach(grp => {
+      const hSel = grp.querySelector('.time-hour-select');
+      const mSel = grp.querySelector('.time-min-select');
+      const hiddenInput = grp.querySelector('.time-combined-input');
+      function updateTime() {
+        if (hSel && mSel && hiddenInput) hiddenInput.value = `${hSel.value}:${mSel.value}`;
       }
+      if (hSel) hSel.addEventListener('change', updateTime);
+      if (mSel) mSel.addEventListener('change', updateTime);
     });
 
-    formEl.querySelectorAll('.time-dropdown-group').forEach(group => {
-      const combinedInput = group.querySelector('.time-combined-input');
-      const hourSelect = group.querySelector('.time-hour-select');
-      const minSelect = group.querySelector('.time-min-select');
-
-      const updateTime = () => {
-        combinedInput.value = `${hourSelect.value}:${minSelect.value}`;
-      };
-      hourSelect.addEventListener('change', updateTime);
-      minSelect.addEventListener('change', updateTime);
-    });
-
-    // 綁定「新增自訂任務」按鈕事件
-    formEl.querySelectorAll('.btn-add-custom-task').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const entryName = btn.dataset.entryName;
-        const inputType = btn.dataset.inputType;
-        const taskName = prompt('請輸入自訂任務內容：');
-        if (taskName && taskName.trim()) {
-          addCustomTaskToForm(formEl, entryName, inputType, taskName.trim());
+    formEl.querySelectorAll('.btn-get-gps').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const targetEntry = this.dataset.targetEntry;
+        if (!navigator.geolocation) {
+          showToast('⚠️ 瀏覽器不支援 GPS 定位功能', 'error');
+          return;
         }
-      });
-    });
-
-    formEl.querySelectorAll('.btn-add-custom-person').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const entryName = btn.dataset.entryName;
-        const inputType = btn.dataset.inputType;
-        const personName = prompt('請輸入自訂人員姓名：');
-        if (personName && personName.trim()) {
-          addCustomPersonToForm(formEl, entryName, inputType, personName.trim());
-        }
-      });
-    });
-
-    formEl.querySelectorAll('.btn-add-custom-drone').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const entryName = btn.dataset.entryName;
-        const inputVal = formEl.querySelector(`.custom-drone-input[data-for-entry="${entryName}"]`).value;
-        if (inputVal.trim()) applyCustomDrone(formEl, entryName, inputVal.trim());
-      });
-    });
-
-    formEl.querySelectorAll('.btn-apply-custom-drone').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const container = btn.closest('.drone-chips-container');
-        const entryName = container.dataset.entryName;
-        const input = container.querySelector('.custom-drone-input');
-        if (input && input.value.trim()) {
-          applyCustomDrone(formEl, entryName, input.value.trim());
-        }
-      });
-    });
-
-    formEl.querySelectorAll('.btn-apply-custom-loc').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const container = btn.closest('.mission-loc-container');
-        const entryName = container.dataset.entryName;
-        const input = container.querySelector('.custom-loc-input');
-        if (input && input.value.trim()) {
-          applyCustomLocation(formEl, entryName, input.value.trim());
-        }
+        showToast('📡 正在獲取當前精確 GPS 座標...');
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            const coordsStr = `${lat}, ${lng}`;
+            const txtInput = formEl.querySelector(`input[name="${targetEntry}"].coord-text-input`);
+            if (txtInput) {
+              txtInput.value = coordsStr;
+              showToast(`📍 已成功取得 GPS：${coordsStr}`);
+              return;
+            }
+            const customInput = formEl.querySelector(`.custom-coord-input[data-for-entry="${targetEntry}"]`);
+            if (customInput) {
+              customInput.value = coordsStr;
+              applyCustomCoordinate(formEl, targetEntry, coordsStr);
+            }
+          },
+          () => showToast('⚠️ 無法取得 GPS 定位，請手動輸入。', 'error'),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
       });
     });
 
     formEl.querySelectorAll('.btn-apply-custom-coord').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const container = btn.closest('.coord-radio-container');
-        const entryName = container.dataset.entryName;
-        const input = container.querySelector('.custom-coord-input');
-        if (input && input.value.trim()) {
-          applyCustomCoord(formEl, entryName, input.value.trim());
-        }
+      btn.addEventListener('click', function () {
+        const input = this.parentElement.querySelector('.custom-coord-input');
+        if (input && input.value.trim()) applyCustomCoordinate(formEl, input.dataset.forEntry, input.value.trim());
       });
     });
 
-    formEl.querySelectorAll('.btn-get-gps').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const entryName = btn.dataset.targetEntry;
-        if (!navigator.geolocation) {
-          showToast('⚠️ 您的瀏覽器不支援定位功能', 'error');
-          return;
-        }
-        showToast('📍 正在取得目前 GPS 座標...');
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude.toFixed(6);
-            const lng = pos.coords.longitude.toFixed(6);
-            const coordStr = `${lat}, ${lng}`;
-            const textInput = formEl.querySelector(`input[name="${entryName}"]`);
-            if (textInput) {
-              textInput.value = coordStr;
-              showToast(`✅ 成功取得 GPS：${coordStr}`);
-            } else {
-              applyCustomCoord(formEl, entryName, coordStr);
-            }
-          },
-          (err) => {
-            showToast('⚠️ 無法取得定位，請確認權限設定', 'error');
-          },
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
+    formEl.querySelectorAll('.btn-apply-custom-loc').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const input = this.parentElement.querySelector('.custom-location-input');
+        if (input && input.value.trim()) applyCustomLocation(formEl, input.dataset.forEntry, input.value.trim());
+      });
+    });
+
+    formEl.querySelectorAll('.btn-apply-custom-drone').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const input = this.parentElement.querySelector('.custom-drone-input');
+        if (input && input.value.trim()) applyCustomDrone(formEl, input.dataset.forEntry, input.value.trim());
+      });
+    });
+
+    formEl.querySelectorAll('.btn-add-custom-drone').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const name = prompt('請輸入自訂無人機型號或序號：');
+        if (name && name.trim()) applyCustomDrone(formEl, this.dataset.entryName, name.trim());
+      });
+    });
+
+    formEl.querySelectorAll('.btn-add-custom-person').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const name = prompt('請輸入新增人員姓名：');
+        if (name && name.trim()) addCustomPersonToForm(formEl, this.dataset.entryName, this.dataset.inputType, name.trim());
+      });
+    });
+
+    // 新增自訂任務按鈕事件監聽
+    formEl.querySelectorAll('.btn-add-custom-task').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const name = prompt('請輸入自訂任務內容：');
+        if (name && name.trim()) addCustomTaskToForm(formEl, this.dataset.entryName, this.dataset.inputType, name.trim());
       });
     });
 
     if (formConfig.id === 'inventory') {
       formEl.querySelectorAll('.inv-grid-card').forEach(card => {
-        card.addEventListener('click', () => {
-          openInventorySectionModal(card.dataset.sectionId, formEl);
+        card.addEventListener('click', function () {
+          openInventorySectionModal(this.dataset.sectionId, formEl);
         });
       });
-
       const btnMarkAll = formEl.querySelector('#btnMarkAllChecked');
       if (btnMarkAll) {
         btnMarkAll.addEventListener('click', () => {
           markAllInventoryItems(formEl, '已清點');
-          showToast('⚡ 已將全表單 56 項裝備一鍵設為【已清點】！');
+          showToast('⚡ 已將全表單 56 項裝備全數標記為「已清點」！');
         });
       }
       updateAllInventoryBlockBadges(formEl);
     }
+
+    formEl.querySelectorAll('.status-pill-btn input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', function () {
+        const group = this.closest('.status-pill-group');
+        if (group) group.querySelectorAll('.status-pill-btn').forEach(b => b.classList.remove('active', 'btn-normal', 'btn-abnormal', 'btn-borrow'));
+        const parentBtn = this.closest('.status-pill-btn');
+        if (parentBtn) {
+          if (this.dataset.opt === '已清點') parentBtn.classList.add('active', 'btn-normal');
+          else if (this.dataset.opt === '有異常') parentBtn.classList.add('active', 'btn-abnormal');
+          else if (this.dataset.opt === '出借') parentBtn.classList.add('active', 'btn-borrow');
+        }
+      });
+    });
+  }
+
+  function handleDroneBorrowAutoFill(formEl) {
+    const checkedDrones = formEl.querySelectorAll('input[name="entry.1253125050"]:checked');
+    if (checkedDrones.length > 0) {
+      formEl.querySelectorAll('.borrow-item-select').forEach(sel => {
+        const label = sel.dataset.rowLabel || '';
+        if (label.includes('機體') || label.includes('遙控器') || label.includes('充電器')) sel.value = '1個';
+        else if (label.includes('電池')) sel.value = '3個';
+      });
+      showToast('🚁 已自動帶入標配件數量');
+    }
+  }
+
+  function applyCustomCoordinate(formEl, entryName, coordValue) {
+    const container = formEl.querySelector(`.coord-radio-container[data-entry-name="${entryName}"]`);
+    if (!container) return;
+    let chip = container.querySelector(`input[value="${coordValue}"]`);
+    if (!chip) {
+      const label = document.createElement('label');
+      label.className = 'choice-chip group active custom-added-chip border-emerald-500/50 bg-emerald-500/10';
+      label.innerHTML = `
+        <input type="radio" name="${entryName}" value="${escapeHtml(coordValue)}" checked>
+        <span class="w-3.5 h-3.5 rounded-full border border-slate-500 mr-1.5 flex items-center justify-center"><span class="dot w-1.5 h-1.5 rounded-full bg-white"></span></span>
+        <span class="text-emerald-400 font-mono font-bold">${escapeHtml(coordValue)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
+      `;
+      container.insertBefore(label, container.querySelector('.custom-coord-input').parentElement);
+      chip = label.querySelector('input');
+      label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
+    }
+    chip.checked = true;
+    const input = container.querySelector('.custom-coord-input');
+    if (input) input.value = '';
+    showToast(`📍 已選定自訂座標：${coordValue}`);
   }
 
   function applyCustomLocation(formEl, entryName, locationValue) {
@@ -883,55 +917,17 @@
       label.innerHTML = `
         <input type="radio" name="${entryName}" value="${escapeHtml(locationValue)}" checked>
         <span class="w-3.5 h-3.5 rounded-full border border-slate-500 mr-1.5 flex items-center justify-center"><span class="dot w-1.5 h-1.5 rounded-full bg-white"></span></span>
-        <span class="text-amber-300 font-bold">${escapeHtml(locationValue)}</span>
+        <span class="text-amber-400 font-bold">${escapeHtml(locationValue)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
-      container.insertBefore(label, container.querySelector('.custom-loc-input').parentElement);
+      container.insertBefore(label, container.querySelector('.custom-location-input').parentElement);
       chip = label.querySelector('input');
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
-    container.querySelectorAll(`input[name="${entryName}"]`).forEach(inp => {
-      inp.checked = (inp === chip);
-      const ch = inp.closest('.choice-chip');
-      if (ch) {
-        if (inp.checked) ch.classList.add('active');
-        else ch.classList.remove('active');
-      }
-    });
-    const input = container.querySelector('.custom-loc-input');
+    chip.checked = true;
+    const input = container.querySelector('.custom-location-input');
     if (input) input.value = '';
-    syncCoordinatesByLocation(formEl, locationValue);
-    showToast(`📍 已選定自訂地點：${locationValue}`);
-  }
-
-  function applyCustomCoord(formEl, entryName, coordValue) {
-    const container = formEl.querySelector(`.coord-radio-container[data-entry-name="${entryName}"]`);
-    if (!container) return;
-    let chip = container.querySelector(`input[value="${coordValue}"]`);
-    if (!chip) {
-      const label = document.createElement('label');
-      label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
-      label.innerHTML = `
-        <input type="radio" name="${entryName}" value="${escapeHtml(coordValue)}" checked>
-        <span class="w-3.5 h-3.5 rounded-full border border-slate-500 mr-1.5 flex items-center justify-center"><span class="dot w-1.5 h-1.5 rounded-full bg-white"></span></span>
-        <span class="text-amber-300 font-bold">${escapeHtml(coordValue)}</span>
-        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
-      `;
-      container.insertBefore(label, container.querySelector('.custom-coord-input').parentElement);
-      chip = label.querySelector('input');
-      label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
-    }
-    container.querySelectorAll(`input[name="${entryName}"]`).forEach(inp => {
-      inp.checked = (inp === chip);
-      const ch = inp.closest('.choice-chip');
-      if (ch) {
-        if (inp.checked) ch.classList.add('active');
-        else ch.classList.remove('active');
-      }
-    });
-    const input = container.querySelector('.custom-coord-input');
-    if (input) input.value = '';
-    showToast(`📍 已選定自訂座標：${coordValue}`);
+    showToast(`🏢 已選定自訂地點：${locationValue}`);
   }
 
   function applyCustomDrone(formEl, entryName, droneValue) {
@@ -954,6 +950,7 @@
     chip.checked = true;
     const input = container.querySelector('.custom-drone-input');
     if (input) input.value = '';
+    handleDroneBorrowAutoFill(formEl);
     showToast(`🚁 已新增自訂機體：${droneValue}`);
   }
 
@@ -1229,8 +1226,6 @@
       unlockBackgroundScroll();
     };
     elements.dashboardCloseBtn.addEventListener('click', closeDashboardModal);
-    elements.dashboardModal.classList.remove('hidden'); // placeholder
-    elements.dashboardModal.classList.add('hidden');
     elements.dashboardModal.addEventListener('click', (e) => { if (e.target === elements.dashboardModal) closeDashboardModal(); });
   }
 
