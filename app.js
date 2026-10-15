@@ -1,6 +1,6 @@
 /**
  * 臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單整合系統
- * 核心應用程式邏輯 (App Controller) - 戰術優化升級完整版
+ * 核心應用程式邏輯 (App Controller) - 戰術優化升級完整版 (含背景滾動鎖定)
  */
 
 (function () {
@@ -66,6 +66,15 @@
     eyeIcon: document.getElementById('eyeIcon')
   };
 
+  // 背景滾動鎖定工具函數
+  function lockBackgroundScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  function unlockBackgroundScroll() {
+    document.body.style.overflow = '';
+  }
+
   // 每日裝備清點：依照原始表單分區（辦公室、器材室、1樓室外停車格、地下室）
   const INVENTORY_SECTIONS = [
     {
@@ -112,18 +121,18 @@
   const CORRECT_PASSWORD = "119"; // 後台解鎖密碼
   const FORM_SHEET_URLS = [
     "https://docs.google.com/spreadsheets/d/1MnEegRXHeZjTPdwAYkHHeuSXqiC978WO71G_ZkzUSP0/edit?resourcekey#gid=2042662497", // 1. 裝備借用
-    "https://docs.google.com/spreadsheets/d/第2個表單對應的試算表ID/edit", // 2. 每日清點
-    "https://docs.google.com/spreadsheets/d/第3個表單對應的試算表ID/edit", // 3. 勤務回報
-    "https://docs.google.com/spreadsheets/d/第4個表單對應的試算表ID/edit", // 4. 裝備保養
-    "https://docs.google.com/spreadsheets/d/第5個表單對應的試算表ID/edit"  // 5. 飛安通報
+    "https://docs.google.com/spreadsheets/d/您的第2個試算表ID/edit", // 2. 每日清點
+    "https://docs.google.com/spreadsheets/d/您的第3個試算表ID/edit", // 3. 勤務回報
+    "https://docs.google.com/spreadsheets/d/您的第4個試算表ID/edit", // 4. 裝備保養
+    "https://docs.google.com/spreadsheets/d/您的第5個試算表ID/edit"  // 5. 飛安通報
   ];
 
   // 初始化程式
   function init() {
-    localStorage.removeItem('uav_custom_members'); // 自訂人員為一次性，不予持久保存
-    localStorage.removeItem('uav_custom_locations'); // 自訂地點為一次性，不予持久保存
-    localStorage.removeItem('uav_custom_coords'); // 自訂座標為一次性，不予持久保存
-    localStorage.removeItem('uav_custom_drones'); // 自訂無人機為一次性，不予持久保存
+    localStorage.removeItem('uav_custom_members');
+    localStorage.removeItem('uav_custom_locations');
+    localStorage.removeItem('uav_custom_coords');
+    localStorage.removeItem('uav_custom_drones');
     applyTheme(state.theme);
     renderNavigation();
     switchForm(state.currentFormId);
@@ -151,7 +160,6 @@
     if (!window.FORMS_DATA || !window.FORMS_DATA.forms) return;
     const forms = window.FORMS_DATA.forms;
 
-    // 桌面版橫向 Tab
     elements.tabNavContainer.innerHTML = forms.map(f => `
       <button type="button" data-form-id="${f.id}" 
         class="form-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap
@@ -161,7 +169,6 @@
       </button>
     `).join('');
 
-    // 手機版底部導覽列
     elements.mobileNavContainer.innerHTML = forms.map(f => `
       <button type="button" data-form-id="${f.id}"
         class="mobile-nav-btn flex-1 flex flex-col items-center justify-center py-2 text-xs transition-colors
@@ -181,7 +188,6 @@
     state.currentFormId = formId;
     window.currentFormIndex = forms.findIndex(f => f.id === formId);
 
-    // 更新導覽列高亮
     document.querySelectorAll('.form-tab-btn').forEach(btn => {
       const isCurrent = btn.dataset.formId === formId;
       btn.className = `form-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
@@ -196,25 +202,19 @@
       }`;
     });
 
-    // 更新表頭資訊（僅保留紅色標籤框框與原表單連結）
     if (elements.formBadge) elements.formBadge.innerText = formConfig.badge;
     if (elements.formOfficialLink) elements.formOfficialLink.href = formConfig.viewUrl;
 
-    // 渲染該表單的所有輸入欄位
     renderFormFields(formConfig);
-
-    // 捲動至表單頂部
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // 判斷是否為時間欄位（時:分）
   function isTimeField(item) {
     if (item.type === 'time') return true;
     const t = item.title || '';
     return t.includes('時:分') || t.includes('時間') && (t.includes('出勤') || t.includes('返隊') || t.includes('起飛') || t.includes('發生'));
   }
 
-  // 判斷是否為人員欄位（排除人員傷亡相關調查欄位）
   function isPersonField(item) {
     const t = item.title || '';
     if (t.includes('傷亡')) return false;
@@ -224,18 +224,15 @@
     );
   }
 
-  // 判斷是否為經緯度/座標欄位
   function isCoordField(item) {
     const t = item.title || '';
     return t.includes('經緯度') || t.includes('座標');
   }
 
-  // 渲染表單欄位核心函數
   function renderFormFields(formConfig) {
     const container = elements.formRenderArea;
     container.innerHTML = '';
 
-    // 建立表單外殼 (指向 Google Form action)
     const formEl = document.createElement('form');
     formEl.id = `active_form_${formConfig.id}`;
     formEl.action = formConfig.actionUrl;
@@ -243,7 +240,6 @@
     formEl.target = 'gform_sink_iframe';
     formEl.className = 'space-y-4';
 
-    // 每日清點表單：加入 pageHistory=0,1,2,3,4（5頁多頁表單必要欄位）
     if (formConfig.id === 'inventory') {
       const phInput = document.createElement('input');
       phInput.type = 'hidden';
@@ -252,7 +248,6 @@
       formEl.appendChild(phInput);
     }
 
-    // 飛安通報表單：加入 pageHistory=0,1（2頁多頁表單必要欄位）
     if (formConfig.id === 'accident') {
       const phInput = document.createElement('input');
       phInput.type = 'hidden';
@@ -261,36 +256,27 @@
       formEl.appendChild(phInput);
     }
 
-    // 加入 fvv=1 標準 Google Form 隱藏參數
     const fvvInput = document.createElement('input');
     fvvInput.type = 'hidden';
     fvvInput.name = 'fvv';
     fvvInput.value = '1';
     formEl.appendChild(fvvInput);
 
-    // ==========================================
-    // 特殊模式：每日清點表單 6 大格戰術儀表板
-    // ==========================================
     if (formConfig.id === 'inventory') {
       renderInventorySpecialLayout(formEl, formConfig);
     } else {
-      // 其他一般表單渲染
       renderStandardLayout(formEl, formConfig);
     }
 
     container.appendChild(formEl);
-
-    // 綁定動態生成的輸入框互動 (晶片選取、一鍵清點、經緯度GPS、自訂選項等)
     bindDynamicFormEvents(formEl, formConfig);
   }
 
-  // 渲染標準表單區段
   function renderStandardLayout(formEl, formConfig) {
     formConfig.sections.forEach((section, sIndex) => {
       const secCard = document.createElement('div');
       secCard.className = 'form-section-card rounded-2xl p-4 sm:p-5 space-y-4';
 
-      // 區段標題
       const secHeader = document.createElement('div');
       secHeader.className = 'border-b border-slate-700/40 pb-2.5 flex items-center justify-between';
       secHeader.innerHTML = `
@@ -302,12 +288,10 @@
       `;
       secCard.appendChild(secHeader);
 
-      // 區段內項目
       section.items.forEach(item => {
         const itemWrapper = document.createElement('div');
         itemWrapper.className = 'form-item-wrapper space-y-1.5';
 
-        // 判斷是否為無人機借出物品 (Grid 特殊優化：改為下拉選單 + 0個選擇)
         if (formConfig.id === 'borrow' && item.type === 'grid' && item.title.includes('借出物品')) {
           itemWrapper.appendChild(renderBorrowGridAsDropdowns(item));
         } else if (item.type === 'grid') {
@@ -315,17 +299,13 @@
         } else {
           itemWrapper.appendChild(renderSingleField(item, formConfig));
         }
-
         secCard.appendChild(itemWrapper);
       });
-
       formEl.appendChild(secCard);
     });
   }
 
-  // 渲染每日裝備清點特殊佈局 (置頂填寫 + 原生4大分區儀表板 + 備註)
   function renderInventorySpecialLayout(formEl, formConfig) {
-    // 1. 置頂：清點日期與清點人員卡片
     const topCard = document.createElement('div');
     topCard.className = 'form-section-card rounded-2xl p-4 sm:p-5 space-y-3.5';
     topCard.innerHTML = `
@@ -339,7 +319,6 @@
       </div>
     `;
 
-    // 取得 Section 1 項目
     const sec1 = formConfig.sections[0];
     if (sec1 && sec1.items) {
       sec1.items.forEach(item => {
@@ -351,7 +330,6 @@
     }
     formEl.appendChild(topCard);
 
-    // 2. 中間：依照原始表單分區（辦公室、器材室、1樓室外停車格、地下室）4 大格卡片
     const dashboardSection = document.createElement('div');
     dashboardSection.className = 'space-y-2';
     dashboardSection.innerHTML = `
@@ -363,15 +341,13 @@
       </div>
       <div class="grid grid-cols-2 gap-2.5 sm:gap-4" id="invDashboardGrid">
         ${INVENTORY_SECTIONS.map(blk => `
-          <div class="inv-grid-card glass-panel rounded-2xl p-3 sm:p-4 border border-slate-700/60 bg-gradient-to-br ${blk.color} relative overflow-hidden flex flex-col justify-between"
+          <div class="inv-grid-card glass-panel rounded-2xl p-3 sm:p-4 border border-slate-700/60 bg-gradient-to-br ${blk.color} relative overflow-hidden flex flex-col justify-between cursor-pointer"
                data-section-id="${blk.id}">
             <div class="flex items-start justify-between">
               <div class="w-9 h-9 rounded-xl bg-slate-900/60 border border-white/10 flex items-center justify-center text-lg">
                 <i class="${blk.icon}"></i>
               </div>
-              <span class="blk-badge px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                待清點
-              </span>
+              <span class="blk-badge px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">待清點</span>
             </div>
             <div class="mt-2.5">
               <h4 class="font-extrabold text-sm sm:text-base text-slate-100">${blk.title}</h4>
@@ -387,12 +363,10 @@
     `;
     formEl.appendChild(dashboardSection);
 
-    // 3. 將所有裝備的隱藏 Radio 項目注入到 formEl（保證即使不開彈窗也能完整透過 form 提交）
     const hiddenRowsContainer = document.createElement('div');
     hiddenRowsContainer.id = 'invAllRowsContainer';
     hiddenRowsContainer.className = 'hidden';
 
-    // 收集所有 grid 項目放入底層
     formConfig.sections.forEach(sec => {
       sec.items.forEach(it => {
         if (it.type === 'grid' && it.rows) {
@@ -404,9 +378,9 @@
             rowHolder.dataset.gridTitle = it.title;
             rowHolder.dataset.rowLabel = row.label;
             rowHolder.innerHTML = `
-              <input type="radio" name="${row.entryName}" value="已清點" class="grid-radio" data-opt="已清點">
-              <input type="radio" name="${row.entryName}" value="有異常" class="grid-radio" data-opt="有異常">
-              <input type="radio" name="${row.entryName}" value="出借" class="grid-radio" data-opt="出借">
+              <input type="radio" name="${row.entryName}" value="已清點" class="grid-radio">
+              <input type="radio" name="${row.entryName}" value="有異常" class="grid-radio">
+              <input type="radio" name="${row.entryName}" value="出借" class="grid-radio">
             `;
             hiddenRowsContainer.appendChild(rowHolder);
           });
@@ -415,7 +389,6 @@
     });
     formEl.appendChild(hiddenRowsContainer);
 
-    // 4. 置底：異常詳述與備註欄位
     const bottomCard = document.createElement('div');
     bottomCard.className = 'form-section-card rounded-2xl p-4 sm:p-5 space-y-3.5';
     bottomCard.innerHTML = `
@@ -426,7 +399,6 @@
       </div>
     `;
 
-    // 取得 Section 5 異常詳述與備註
     const sec5 = formConfig.sections[4];
     if (sec5 && sec5.items) {
       sec5.items.forEach(item => {
@@ -441,7 +413,6 @@
     formEl.appendChild(bottomCard);
   }
 
-  // 渲染無人機借出物品（下拉式選單 + 新增 0 個）
   function renderBorrowGridAsDropdowns(item) {
     const wrap = document.createElement('div');
     wrap.className = 'space-y-2';
@@ -474,7 +445,6 @@
     return wrap;
   }
 
-  // 渲染標準網格項目
   function renderStandardGrid(item) {
     const wrap = document.createElement('div');
     wrap.className = 'space-y-2';
@@ -489,8 +459,7 @@
           <div class="inventory-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl bg-slate-800/30 border border-slate-700/40" data-row-entry="${row.entryName}">
             <span class="text-xs sm:text-sm font-medium text-slate-300 flex items-center gap-2">
               <i class="fas fa-cube text-slate-500 text-xs"></i>
-              ${escapeHtml(row.label)}
-              ${row.required ? '<span class="text-red-500">*</span>' : ''}
+              ${escapeHtml(row.label)}${row.required ? '<span class="text-red-500">*</span>' : ''}
             </span>
             <div class="status-pill-group self-end sm:self-auto flex items-center gap-1">
               ${['已清點', '有異常', '出借'].map(opt => `
@@ -507,7 +476,6 @@
     return wrap;
   }
 
-  // 取得本地時區（臺灣時間）的今日年月日字串 (YYYY-MM-DD)
   function getLocalTodayDateString() {
     const d = new Date();
     const year = d.getFullYear();
@@ -516,20 +484,17 @@
     return `${year}-${month}-${day}`;
   }
 
-  // 渲染單一輸入欄位 (包含下拉式時間、人員自訂、經緯度GPS定位按鈕等)
   function renderSingleField(item, formConfig) {
     const isReq = item.required;
     const reqTag = isReq ? '<span class="text-red-500 font-bold ml-1">*</span>' : '<span class="text-slate-500 text-xs font-normal ml-1">(選填)</span>';
     const fieldContainer = document.createElement('div');
     fieldContainer.className = 'space-y-1.5';
 
-    // 1. 時間欄位：改為下拉式選單 (時:分)
     if (isTimeField(item)) {
       const now = new Date();
       const curH = String(now.getHours()).padStart(2, '0');
       const curM = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, '0');
       const initialTime = `${curH}:${curM}`;
-
       const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
       const minutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
@@ -555,7 +520,6 @@
       return fieldContainer;
     }
 
-    // 2. 人員選擇欄位：提供 + 自訂新增選項
     if (isPersonField(item)) {
       const allMembers = [...item.options];
       const isCheckbox = item.type === 'checkbox';
@@ -584,7 +548,6 @@
       return fieldContainer;
     }
 
-    // 3. 日期欄位
     if (item.type === 'date') {
       const todayStr = getLocalTodayDateString();
       fieldContainer.innerHTML = `
@@ -596,7 +559,6 @@
       return fieldContainer;
     }
 
-    // 4. 經緯度/座標欄位
     if (isCoordField(item)) {
       if (item.type === 'radio') {
         fieldContainer.innerHTML = `
@@ -642,7 +604,6 @@
       return fieldContainer;
     }
 
-    // 5. 借出表單：無人機機體
     if (formConfig.id === 'borrow' && item.title.includes('無人機機體')) {
       fieldContainer.innerHTML = `
         <div class="flex items-center justify-between">
@@ -664,7 +625,7 @@
             </label>
           `).join('')}
           <div class="w-full flex items-center gap-2 mt-1">
-            <input type="text" placeholder="自訂機體/序號：例 DJI Matrice 350" class="tactical-input flex-1 text-xs custom-drone-input" data-for-entry="${item.entryName}">
+            <input type="text" placeholder="自訂機體/序號..." class="tactical-input flex-1 text-xs custom-drone-input" data-for-entry="${item.entryName}">
             <button type="button" class="btn-apply-custom-drone px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">帶入自訂</button>
           </div>
         </div>
@@ -672,7 +633,6 @@
       return fieldContainer;
     }
 
-    // 6. 出勤地點欄位
     if (formConfig.id === 'mission' && item.title.includes('出勤地點') && item.type === 'radio') {
       fieldContainer.innerHTML = `
         <div class="flex items-center justify-between">
@@ -691,7 +651,7 @@
             </label>
           `).join('')}
           <div class="w-full flex items-center gap-2 mt-1">
-            <input type="text" placeholder="自訂地點：例 北屯區太原路三段123號" class="tactical-input flex-1 text-xs custom-location-input" data-for-entry="${item.entryName}">
+            <input type="text" placeholder="自訂地點..." class="tactical-input flex-1 text-xs custom-location-input" data-for-entry="${item.entryName}">
             <button type="button" class="btn-apply-custom-loc px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">帶入自訂</button>
           </div>
         </div>
@@ -699,7 +659,6 @@
       return fieldContainer;
     }
 
-    // 7. 常規項目
     let inputHtml = '';
     switch (item.type) {
       case 'textarea':
@@ -731,9 +690,7 @@
     return fieldContainer;
   }
 
-  // 綁定動態元件行為
   function bindDynamicFormEvents(formEl, formConfig) {
-    // 晶片單選與多選點擊樣式連動
     formEl.querySelectorAll('.choice-chip input').forEach(input => {
       input.addEventListener('change', function () {
         if (this.type === 'radio') {
@@ -771,7 +728,6 @@
       });
     });
 
-    // 時間下拉選單連動
     formEl.querySelectorAll('.time-dropdown-group').forEach(grp => {
       const hSel = grp.querySelector('.time-hour-select');
       const mSel = grp.querySelector('.time-min-select');
@@ -783,7 +739,6 @@
       if (mSel) mSel.addEventListener('change', updateTime);
     });
 
-    // 經緯度 GPS 定位按鈕
     formEl.querySelectorAll('.btn-get-gps').forEach(btn => {
       btn.addEventListener('click', function () {
         const targetEntry = this.dataset.targetEntry;
@@ -815,7 +770,6 @@
       });
     });
 
-    // 各類自訂套用按鈕
     formEl.querySelectorAll('.btn-apply-custom-coord').forEach(btn => {
       btn.addEventListener('click', function () {
         const input = this.parentElement.querySelector('.custom-coord-input');
@@ -851,7 +805,6 @@
       });
     });
 
-    // 每日清點分區點擊
     if (formConfig.id === 'inventory') {
       formEl.querySelectorAll('.inv-grid-card').forEach(card => {
         card.addEventListener('click', function () {
@@ -882,7 +835,6 @@
     });
   }
 
-  // 借無人機時自動帶入標配套件
   function handleDroneBorrowAutoFill(formEl) {
     const checkedDrones = formEl.querySelectorAll('input[name="entry.1253125050"]:checked');
     if (checkedDrones.length > 0) {
@@ -1085,8 +1037,15 @@
     };
 
     updateModalProgress(sectionRows);
+    lockBackgroundScroll();
     elements.inventorySectionModal.classList.remove('hidden');
     elements.inventorySectionModal.classList.add('flex');
+  }
+
+  function closeInventorySectionModal() {
+    elements.inventorySectionModal.classList.add('hidden');
+    elements.inventorySectionModal.classList.remove('flex');
+    unlockBackgroundScroll();
   }
 
   function updateModalProgress(matchedRows) {
@@ -1157,6 +1116,7 @@
     elements.dashboardDrawerBtn.addEventListener('click', () => {
       elements.dashboardPasswordInput.value = '';
       elements.passwordErrorMsg.classList.add('hidden');
+      lockBackgroundScroll();
       elements.dashboardPasswordModal.classList.remove('hidden');
       elements.dashboardPasswordModal.classList.add('flex');
       elements.dashboardPasswordInput.focus();
@@ -1198,6 +1158,7 @@
     const closePasswordModal = () => {
       elements.dashboardPasswordModal.classList.add('hidden');
       elements.dashboardPasswordModal.classList.remove('flex');
+      unlockBackgroundScroll();
     };
     elements.passwordCancelBtn.addEventListener('click', closePasswordModal);
     elements.dashboardPasswordModal.addEventListener('click', (e) => { if (e.target === elements.dashboardPasswordModal) closePasswordModal(); });
@@ -1206,6 +1167,7 @@
       elements.dashboardModal.classList.add('hidden');
       elements.dashboardModal.classList.remove('flex');
       elements.dashboardIframe.src = "about:blank";
+      unlockBackgroundScroll();
     };
     elements.dashboardCloseBtn.addEventListener('click', closeDashboardModal);
     elements.dashboardModal.addEventListener('click', (e) => { if (e.target === elements.dashboardModal) closeDashboardModal(); });
@@ -1229,10 +1191,10 @@
       elements.historyCloseBtn.addEventListener('click', () => {
         elements.historyModal.classList.add('hidden');
         elements.historyModal.classList.remove('flex');
+        unlockBackgroundScroll();
       });
     }
 
-    // 導覽列分頁點擊事件
     document.addEventListener('click', (e) => {
       const tabBtn = e.target.closest('.form-tab-btn') || e.target.closest('.mobile-nav-btn');
       if (tabBtn && tabBtn.dataset.formId) {
@@ -1244,30 +1206,23 @@
       elements.submitBtn.addEventListener('click', handleFormSubmit);
     }
 
-    // 確認視窗按鈕
     elements.confirmCancelBtn.addEventListener('click', () => {
       elements.confirmModal.classList.add('hidden');
       elements.confirmModal.classList.remove('flex');
+      unlockBackgroundScroll();
     });
     elements.confirmSubmitBtn.addEventListener('click', executeFormSubmit);
 
-    // 每日清點區塊視窗關閉與完成
-    elements.secModalCloseBtn.addEventListener('click', () => {
-      elements.inventorySectionModal.classList.add('hidden');
-      elements.inventorySectionModal.classList.remove('flex');
-    });
-    elements.secModalDoneBtn.addEventListener('click', () => {
-      elements.inventorySectionModal.classList.add('hidden');
-      elements.inventorySectionModal.classList.remove('flex');
-    });
+    elements.secModalCloseBtn.addEventListener('click', closeInventorySectionModal);
+    elements.secModalDoneBtn.addEventListener('click', closeInventorySectionModal);
 
-    // 點擊背景遮罩關閉視窗
-    [elements.inventorySectionModal, elements.confirmModal, elements.historyModal, elements.successModal, elements.dashboardModal, elements.dashboardPasswordModal].forEach(modal => {
+    [elements.inventorySectionModal, elements.confirmModal, elements.historyModal, elements.successModal].forEach(modal => {
       if (modal) {
         modal.addEventListener('click', e => {
           if (e.target === modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            unlockBackgroundScroll();
             if (modal === elements.successModal) {
               resetAndPrepareNextForm();
             }
@@ -1276,22 +1231,22 @@
       }
     });
 
-    // 成功視窗按鈕關閉與下一筆
     elements.successModalClose.addEventListener('click', () => {
       elements.successModal.classList.add('hidden');
       elements.successModal.classList.remove('flex');
+      unlockBackgroundScroll();
       resetAndPrepareNextForm();
     });
 
     elements.successNextBtn.addEventListener('click', () => {
       elements.successModal.classList.add('hidden');
       elements.successModal.classList.remove('flex');
+      unlockBackgroundScroll();
       resetAndPrepareNextForm();
       showToast('已重設為全新表單，可繼續填寫下一筆！');
     });
   }
 
-  // 表單驗證與確認視窗觸發
   function handleFormSubmit() {
     const activeForm = document.getElementById(`active_form_${state.currentFormId}`);
     if (!activeForm) return;
@@ -1354,7 +1309,6 @@
     showConfirmModal(activeForm, formConfig);
   }
 
-  // 顯示確認視窗
   function showConfirmModal(activeForm, formConfig) {
     const formData = new FormData(activeForm);
     const summaryItems = [];
@@ -1407,11 +1361,11 @@
       </div>
     `;
 
+    lockBackgroundScroll();
     elements.confirmModal.classList.remove('hidden');
     elements.confirmModal.classList.add('flex');
   }
 
-  // 實際發送表單至 Google Forms
   async function executeFormSubmit() {
     elements.confirmModal.classList.add('hidden');
     elements.confirmModal.classList.remove('flex');
@@ -1467,6 +1421,7 @@
       console.error(err);
       elements.loadingOverlay.classList.add('hidden');
       elements.loadingOverlay.classList.remove('flex');
+      unlockBackgroundScroll();
       showToast('⚠️ 提交發生錯誤，請檢查網路連線。', 'error');
     }
   }
@@ -1477,6 +1432,7 @@
   }
 
   function showSuccessModal(record) {
+    lockBackgroundScroll();
     elements.successModal.classList.remove('hidden');
     elements.successModal.classList.add('flex');
     elements.successSummaryContent.innerHTML = `
@@ -1495,6 +1451,7 @@
   }
 
   function openHistoryDrawer() {
+    lockBackgroundScroll();
     elements.historyModal.classList.remove('hidden');
     elements.historyModal.classList.add('flex');
 
@@ -1544,7 +1501,6 @@
       .replace(/'/g, '&#39;');
   }
 
-  // 啟動程式
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
