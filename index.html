@@ -1,308 +1,351 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>臺中市政府消防局 特搜空拍隊 - 勤務表單整合系統</title>
-    
-    <!-- Google Fonts 字型 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome 圖標庫 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Noto Sans TC"', '"Outfit"', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'monospace']
-                    }
-                }
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單整合系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 6.4.0 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
         }
-    </script>
-    
-    <!-- 自定義精美戰術風樣式 -->
-    <link rel="stylesheet" href="style.css">
+      }
+    }
+  </script>
+  
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .glass-panel { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+    .tactical-input {
+      background-color: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      color: #f8fafc;
+      border-radius: 0.75rem;
+      padding: 0.65rem 0.875rem;
+      width: 100%;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .tactical-input:focus { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+    .choice-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 0.875rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      background-color: rgba(30, 41, 59, 0.4);
+      color: #94a3b8;
+      font-size: 0.813rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .choice-chip input { display: none; }
+    .choice-chip.active {
+      background-color: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.6);
+      color: #f8fafc;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+    }
+    .status-pill-btn {
+      background-color: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      color: #94a3b8;
+    }
+    .status-pill-btn.btn-normal.active { background-color: #059669; border-color: #10b981; color: white; }
+    .status-pill-btn.btn-abnormal.active { background-color: #e11d48; border-color: #f43f5e; color: white; }
+    .status-pill-btn.btn-borrow.active { background-color: #d97706; border-color: #f59e0b; color: white; }
+    .form-section-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    /* 隱藏捲軸但保持滾動 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
-<body class="tactical-dark antialiased min-h-screen pb-28 md:pb-16 selection:bg-red-500 selection:text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-red-600 selection:text-white pb-20 sm:pb-8">
 
-    <!-- 隱藏式 Google Form 提交目標 iframe (免後端無痛跨域直存) -->
-    <iframe name="gform_sink_iframe" id="gform_sink_iframe" class="hidden" style="display:none;" title="Google Forms Sink"></iframe>
+  <!-- 隱藏 iframe 用於 Google Forms 無重新整理背景提交 -->
+  <iframe name="gform_sink_iframe" id="gform_sink_iframe" class="hidden"></iframe>
 
-    <!-- 頂部高質感導覽列 -->
-    <header class="sticky top-0 z-40 glass-panel border-b transition-colors duration-200">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-4">
-            
-            <!-- 品牌與隊徽 -->
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-red-600/30 ring-2 ring-red-500/20">
-                    <!-- 四軸多旋翼無人機專屬戰術向量圖標 -->
-                    <svg class="w-6 h-6 sm:w-7 sm:h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="4.5" cy="4.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <circle cx="19.5" cy="4.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <circle cx="4.5" cy="19.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <circle cx="19.5" cy="19.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <circle cx="4.5" cy="4.5" r="0.75" fill="currentColor"/>
-                        <circle cx="19.5" cy="4.5" r="0.75" fill="currentColor"/>
-                        <circle cx="4.5" cy="19.5" r="0.75" fill="currentColor"/>
-                        <circle cx="19.5" cy="19.5" r="0.75" fill="currentColor"/>
-                        <path d="M6.5 6.5L9.5 9.5"/>
-                        <path d="M17.5 6.5L14.5 9.5"/>
-                        <path d="M6.5 17.5L9.5 14.5"/>
-                        <path d="M17.5 17.5L14.5 14.5"/>
-                        <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="currentColor" fill-opacity="0.25"/>
-                        <circle cx="12" cy="12" r="1" fill="currentColor"/>
-                    </svg>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="font-extrabold text-sm sm:text-lg tracking-wider text-slate-100 flex items-center gap-1.5">
-                            特搜空拍隊
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-600/20 text-red-400 border border-red-500/30">勤務整合</span>
-                        </span>
-                    </div>
-                    <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                        <span>臺中市政府消防局</span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- 桌面版 Tab 切換容器 -->
-            <nav id="tabNavContainer" class="hidden lg:flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-900/60 border border-slate-700/50 shadow-inner overflow-x-auto max-w-2xl">
-                <!-- 由 app.js 動態渲染 Tab 按鈕 -->
-            </nav>
-
-            <!-- 右側功能捷徑 (深淺主題切換、紀錄抽屜、官方連結) -->
-            <div class="flex items-center gap-2">
-                <button type="button" id="historyDrawerBtn" title="查看本機提交紀錄"
-                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 flex items-center justify-center transition active:scale-95 shadow-sm">
-                    <i class="fas fa-history text-sm"></i>
-                </button>
-                <button type="button" id="themeToggleBtn" title="切換深淺模式"
-                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 flex items-center justify-center transition active:scale-95 shadow-sm">
-                    <i class="fas fa-moon text-sm text-amber-400"></i>
-                </button>
-            </div>
+  <!-- 頂部導覽列 (Top Navigation Header) -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      
+      <!-- 單位標題與 Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-600/30 text-white font-black text-lg">
+          <i class="fas fa-drone"></i>
         </div>
-
-        <!-- 平板與中螢幕橫向滑動選單 (Tablet only) -->
-        <div class="lg:hidden border-t border-slate-800/60 px-4 py-2.5 overflow-x-auto no-scrollbar">
-            <div id="tabletTabContainer" class="flex items-center gap-2 min-w-max">
-                <!-- 平板版選單由 JS 監聽 tabNavContainer 即可 -->
-            </div>
+        <div>
+          <h1 class="font-black text-sm sm:text-base tracking-wide text-slate-100 flex items-center gap-2">
+            <span>臺中市特搜大隊空拍隊</span>
+            <span id="formBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-mono font-bold">裝備借用</span>
+          </h1>
+          <p class="text-[11px] text-slate-400 font-mono">TAICHUNG SPECIAL SEARCH & RESCUE DRONE TEAM</p>
         </div>
-    </header>
+      </div>
 
-    <!-- 主體內容區塊 -->
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
-        
-        <!-- 精簡表單頂部標籤列 (縮小空間，只留紅色框框與文字) -->
-        <div class="flex items-center justify-between px-1">
-            <div class="flex items-center gap-2.5">
-                <span id="formBadge" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-600/30 border border-red-500/40 tracking-wide">
-                    無人機器材
-                </span>
-            </div>
-            <!-- 官方表單查看按鈕 (小巧簡約) -->
-            <a id="formOfficialLink" href="#" target="_blank" rel="noopener noreferrer"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/70 hover:bg-slate-700 border border-slate-700/60 text-xs font-semibold text-slate-300 hover:text-white transition shadow-sm">
-                <i class="fas fa-external-link-alt text-amber-400 text-xs"></i>
-                <span>原表單</span>
-            </a>
-        </div>
+      <!-- 右側快捷按鈕群 (後台數據檢視、歷史紀錄、主題切換) -->
+      <div class="flex items-center gap-2">
+        <!-- 後台數據檢視 (需密碼 119) -->
+        <button id="dashboardDrawerBtn" type="button" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-emerald-400 transition shadow-sm" title="雲端試算表後台檢視">
+          <i class="fas fa-database text-sm"></i>
+        </button>
+        <!-- 提交歷史紀錄 -->
+        <button id="historyDrawerBtn" type="button" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 transition shadow-sm" title="提交歷史紀錄">
+          <i class="fas fa-clock-rotate-left text-sm"></i>
+        </button>
+        <!-- 明暗主題切換 -->
+        <button id="themeToggleBtn" type="button" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 transition shadow-sm" title="切換介面主題">
+          <i class="fas fa-moon text-amber-400"></i>
+        </button>
+      </div>
 
-        <!-- 動態表單渲染核心容器 -->
-        <div id="formRenderArea" class="space-y-6">
-            <!-- 由 app.js 根據 forms-data.js 自動動態產出美化元件 -->
-        </div>
-
-        <!-- 送出按鈕控制卡片 -->
-        <div class="sticky bottom-20 md:bottom-6 z-30 pt-4">
-            <div class="glass-panel p-3 sm:p-4 rounded-2xl shadow-2xl border border-red-500/20 max-w-xl mx-auto flex items-center gap-3">
-                <button type="button" id="submitBtn"
-                    class="flex-1 bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 active:scale-[0.98] text-white font-extrabold py-3.5 sm:py-4 px-6 rounded-xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2.5 text-base sm:text-lg">
-                    <i class="fas fa-paper-plane"></i>
-                    <span id="submitBtnText">送出表單</span>
-                </button>
-            </div>
-        </div>
-    </main>
-
-    <!-- 手機版底部固定導覽列 (Mobile Dock) -->
-    <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-slate-800/80 px-2 py-1 safe-bottom">
-        <div id="mobileNavContainer" class="flex items-center justify-around">
-            <!-- 由 app.js 動態生成手機按鈕 -->
-        </div>
-    </nav>
-
-    <!-- 傳輸中遮罩動畫 (Loading Overlay) -->
-    <div id="loadingOverlay" class="fixed inset-0 z-50 modal-backdrop bg-slate-950/80 hidden items-center justify-center p-4">
-        <div class="glass-panel p-8 rounded-3xl border border-slate-700 shadow-2xl flex flex-col items-center max-w-xs text-center space-y-4">
-            <div class="relative w-16 h-16">
-                <div class="absolute inset-0 rounded-full border-4 border-slate-700"></div>
-                <div class="absolute inset-0 rounded-full border-4 border-red-500 border-t-transparent animate-spin"></div>
-                <div class="absolute inset-0 flex items-center justify-center text-red-500 text-xl">
-                    <svg class="w-8 h-8 animate-bounce text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <circle cx="4.5" cy="4.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <circle cx="19.5" cy="4.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <circle cx="4.5" cy="19.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <circle cx="19.5" cy="19.5" r="2.5" stroke-dasharray="2 1.5"/>
-                        <path d="M6.5 6.5L9.5 9.5M17.5 6.5L14.5 9.5M6.5 17.5L9.5 14.5M17.5 17.5L14.5 14.5"/>
-                        <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="currentColor" fill-opacity="0.3"/>
-                    </svg>
-                </div>
-            </div>
-            <div>
-                <h4 class="font-bold text-base text-slate-100">正在同步至雲端後台</h4>
-                <p class="text-xs text-slate-400 mt-1">資料直傳 Google Forms，請稍候...</p>
-            </div>
-        </div>
     </div>
 
-    <!-- 送出前資料確認對話視窗 (Confirm Modal) -->
-    <div id="confirmModal" class="fixed inset-0 z-50 modal-backdrop bg-slate-950/85 hidden items-center justify-center p-4">
-        <div class="glass-panel p-5 sm:p-7 rounded-3xl border border-red-500/40 shadow-2xl max-w-md w-full space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
-                <div class="w-10 h-10 rounded-xl bg-red-600/20 text-red-400 border border-red-500/30 flex items-center justify-center text-lg">
-                    <i class="fas fa-clipboard-check"></i>
-                </div>
-                <div>
-                    <h3 class="text-base font-black text-slate-100">確認送出表單資料？</h3>
-                    <p class="text-xs text-slate-400">請核對填寫內容，送出後即時同步至雲端後台</p>
-                </div>
-            </div>
+    <!-- 桌面版橫向分頁導覽 (Desktop Tabs) -->
+    <div class="hidden sm:block border-t border-slate-800/60 bg-slate-950/40">
+      <div class="max-w-5xl mx-auto px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar" id="tabNavContainer">
+        <!-- 動態渲染 5 個表單分頁按鈕 -->
+      </div>
+    </div>
+  </header>
 
-            <!-- 確認內容預覽清單 -->
-            <div id="confirmSummaryContent" class="max-h-[52vh] overflow-y-auto space-y-2 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs sm:text-sm">
-                <!-- 由 app.js 動態注入確認清單 -->
-            </div>
-
-            <div class="flex items-center gap-3 pt-2">
-                <button type="button" id="confirmCancelBtn"
-                    class="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 font-bold text-xs sm:text-sm border border-slate-700 transition">
-                    返回修改
-                </button>
-                <button type="button" id="confirmSubmitBtn"
-                    class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-red-600/30 transition flex items-center justify-center gap-1.5">
-                    <i class="fas fa-paper-plane"></i>
-                    <span>確認送出</span>
-                </button>
-            </div>
-        </div>
+  <!-- 主內容區 (Main Content Area) -->
+  <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-5 space-y-5">
+    
+    <!-- 表頭說明區 -->
+    <div class="flex items-center justify-between px-1">
+      <div>
+        <h2 id="formHeaderTitle" class="text-lg sm:text-xl font-black text-slate-100 flex items-center gap-2">
+          <i class="fas fa-file-lines text-red-500"></i> <span>動態勤務表單填寫</span>
+        </h2>
+        <p id="formHeaderDesc" class="text-xs text-slate-400 mt-0.5">所有填寫內容將透過安全通道即時同步至雲端試算表後台。</p>
+      </div>
+      <a id="formOfficialLink" href="#" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-xs font-semibold transition">
+        <span>Google 原始表單</span>
+        <i class="fas fa-external-link-alt text-[10px]"></i>
+      </a>
     </div>
 
-    <!-- 每日清點區塊獨立彈窗 (Inventory Section Modal) -->
-    <div id="inventorySectionModal" class="fixed inset-0 z-50 modal-backdrop bg-slate-950/85 hidden items-center justify-center p-3 sm:p-4">
-        <div class="glass-panel p-4 sm:p-6 rounded-3xl border border-emerald-500/30 shadow-2xl max-w-xl sm:max-w-2xl w-full max-h-[90vh] flex flex-col space-y-3 animate-in fade-in zoom-in-95 duration-200">
-            <!-- 視窗標題列 -->
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div class="flex items-center gap-2.5">
-                    <div id="secModalIcon" class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-base">
-                        <i class="fas fa-box"></i>
-                    </div>
-                    <div>
-                        <h3 id="secModalTitle" class="font-black text-sm sm:text-base text-slate-100">區塊清點項目</h3>
-                        <p id="secModalSub" class="text-xs text-slate-400">請逐項確認裝備現況</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button type="button" id="btnSecQuickAll" class="px-2.5 py-1.5 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-lg border border-emerald-500/40 transition">
-                        ⚡ 全數正常
-                    </button>
-                    <button type="button" id="secModalCloseBtn" class="text-slate-400 hover:text-white p-1 text-base">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 項目清單滾動區 -->
-            <div id="secModalItemsList" class="flex-1 overflow-y-auto space-y-2.5 pr-1 py-1">
-                <!-- 由 app.js 動態注入項目列 -->
-            </div>
-
-            <!-- 視窗底端確認完成 -->
-            <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
-                <span id="secModalProgress" class="text-xs font-mono text-emerald-400 font-bold">已清點：0 / 0</span>
-                <button type="button" id="secModalDoneBtn" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition active:scale-95">
-                    完成清點
-                </button>
-            </div>
-        </div>
+    <!-- 動態表單渲染區 (由 app.js 注入對應的表單欄位) -->
+    <div id="formRenderArea" class="space-y-4">
+      <!-- 表單本體將載入於此 -->
     </div>
 
-    <!-- 送出成功對話視窗 (Success Modal) -->
-    <div id="successModal" class="fixed inset-0 z-50 modal-backdrop bg-slate-950/80 hidden items-center justify-center p-4">
-        <div class="glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-500/40 shadow-2xl max-w-md w-full space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-3xl mx-auto shadow-lg shadow-emerald-500/20">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            
-            <div class="text-center space-y-1">
-                <h3 class="text-xl font-black text-slate-100">提交成功！</h3>
-                <p class="text-xs text-slate-400">已完整記錄至雲端 Google 試算表後台。</p>
-            </div>
-
-            <!-- 摘要內容卡片 -->
-            <div id="successSummaryContent" class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-                <!-- 由 app.js 注入摘要明細 -->
-            </div>
-
-            <div class="flex items-center gap-3 pt-2">
-                <button type="button" id="successNextBtn"
-                    class="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition active:scale-95 flex items-center justify-center gap-2">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>繼續填寫下一筆</span>
-                </button>
-                <button type="button" id="successModalClose"
-                    class="py-3 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm border border-slate-700 transition">
-                    關閉
-                </button>
-            </div>
-        </div>
+    <!-- 送出按鈕固定列 -->
+    <div class="pt-4 pb-6">
+      <button id="submitBtn" type="button" class="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-600 active:scale-[0.99] text-white font-black text-base shadow-xl shadow-red-600/30 transition flex items-center justify-center gap-2.5">
+        <i class="fas fa-paper-plane"></i>
+        <span id="submitBtnText">確認填寫內容並預覽送出</span>
+      </button>
     </div>
 
-    <!-- 本機歷史紀錄抽屜 (History Modal) -->
-    <div id="historyModal" class="fixed inset-0 z-50 modal-backdrop bg-slate-950/80 hidden items-center justify-center p-4">
-        <div class="glass-panel p-6 sm:p-7 rounded-3xl border border-slate-700 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div class="flex items-center gap-2.5">
-                    <i class="fas fa-history text-amber-400"></i>
-                    <h3 class="font-bold text-base text-slate-100">本機最近提交紀錄</h3>
-                </div>
-                <button type="button" id="historyCloseBtn" class="text-slate-400 hover:text-white p-1">
-                    <i class="fas fa-times text-lg"></i>
-                </button>
-            </div>
+  </main>
 
-            <!-- 紀錄清單捲動區 -->
-            <div id="historyList" class="flex-1 overflow-y-auto space-y-3 pr-1">
-                <!-- 由 app.js 動態渲染 -->
-            </div>
-
-            <div class="pt-2 text-right">
-                <span class="text-xs text-slate-500">此紀錄儲存於本機瀏覽器，方便值勤人員查閱。</span>
-            </div>
-        </div>
+  <!-- 手機版底部導覽列 (Mobile Bottom Navigation Bar) -->
+  <nav class="sm:hidden fixed bottom-0 left-0 right-0 z-30 glass-panel border-t border-slate-800 bg-slate-950/90 backdrop-blur-lg">
+    <div class="flex items-center justify-around h-16 px-1" id="mobileNavContainer">
+      <!-- 手機端 5 個分頁按鈕 -->
     </div>
+  </nav>
 
-    <!-- 浮動通知提示 (Toast) -->
-    <div id="toastNotification" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden transition-all duration-300">
-        <div class="glass-panel px-5 py-3 rounded-2xl border border-slate-700 shadow-2xl flex items-center gap-3 text-sm text-slate-100 font-medium">
-            <i class="fas fa-info-circle text-amber-400"></i>
-            <span id="toastMsg">通知訊息</span>
+  <!-- ========================================== -->
+  <!-- 彈窗與互動視窗群組 (Modals & Overlays) -->
+  <!-- ========================================== -->
+
+  <!-- 1. 提交前確認彈窗 (Confirmation Modal) -->
+  <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl border border-slate-700/80 p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+            <i class="fas fa-triangle-exclamation"></i>
+          </div>
+          <h3 class="font-extrabold text-base text-slate-100">確認提交填寫內容</h3>
         </div>
+      </div>
+      <div id="confirmSummaryContent" class="space-y-2 text-xs sm:text-sm max-h-60 overflow-y-auto pr-1">
+        <!-- 動態摘要 -->
+      </div>
+      <div class="flex items-center gap-3 pt-2">
+        <button id="confirmCancelBtn" type="button" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-xs sm:text-sm text-slate-300 transition">返回修改</button>
+        <button id="confirmSubmitBtn" type="button" class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 font-bold text-xs sm:text-sm text-white shadow-lg shadow-red-600/30 transition">確認送出</button>
+      </div>
     </div>
+  </div>
 
-    <!-- 載入資料配置與控制器腳本 -->
-    <script src="forms-data.js"></script>
-    <script src="app.js"></script>
+  <!-- 2. 每日清點分區詳細彈窗 (Inventory Section Modal) -->
+  <div id="inventorySectionModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="glass-panel w-full max-w-lg rounded-3xl border border-slate-700/80 p-5 sm:p-6 space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div id="secModalIcon" class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-lg">
+            <i class="fas fa-building"></i>
+          </div>
+          <div>
+            <h3 id="secModalTitle" class="font-extrabold text-base text-slate-100">辦公室</h3>
+            <p id="secModalSub" class="text-xs text-slate-400">分區裝備狀態清點</p>
+          </div>
+        </div>
+        <button id="secModalCloseBtn" type="button" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+        <span id="secModalProgress" class="text-xs font-mono font-bold text-slate-300">已清點：0 / 0</span>
+        <button id="btnSecQuickAll" type="button" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i class="fas fa-check"></i> 本分區一鍵全數「已清點」
+        </button>
+      </div>
+
+      <div id="secModalItemsList" class="flex-1 overflow-y-auto space-y-3 pr-1">
+        <!-- 動態清點裝備列表 -->
+      </div>
+
+      <div class="pt-2 border-t border-slate-800">
+        <button id="secModalDoneBtn" type="button" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-sm text-slate-200 transition">完成並返回主畫面</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 後台密碼驗證彈窗 (Password Verification Modal) -->
+  <div id="dashboardPasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="glass-panel w-full max-w-sm rounded-3xl border border-slate-700/80 p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg">
+          <i class="fas fa-shield-halved"></i>
+        </div>
+        <div>
+          <h3 class="font-extrabold text-base text-slate-100">後台數據安全驗證</h3>
+          <p class="text-xs text-slate-400">請輸入解鎖密碼以存取雲端試算表</p>
+        </div>
+      </div>
+      <div class="space-y-3 pt-1">
+        <div class="relative">
+          <input type="password" id="dashboardPasswordInput" placeholder="輸入解鎖密碼 (預設 119)" class="tactical-input font-mono pr-10 text-sm">
+          <button type="button" id="togglePasswordBtn" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+            <i id="eyeIcon" class="fas fa-eye text-sm"></i>
+          </button>
+        </div>
+        <p id="passwordErrorMsg" class="text-xs text-red-400 hidden font-bold flex items-center gap-1">
+          <i class="fas fa-circle-exclamation"></i> 密碼錯誤，請重新輸入
+        </p>
+      </div>
+      <div class="flex items-center gap-3 pt-2">
+        <button id="passwordCancelBtn" type="button" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-xs text-slate-300 transition">取消</button>
+        <button id="passwordSubmitBtn" type="button" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-lg shadow-emerald-600/30 transition">確認解鎖</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 雲端試算表後台 iframe 檢視彈窗 (Dashboard iframe Modal) -->
+  <div id="dashboardModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-6">
+    <div class="glass-panel w-full max-w-5xl h-[92vh] rounded-3xl border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-900/60">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+            <i class="fas fa-table"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm sm:text-base text-slate-100">雲端試算表後台即時檢視</h3>
+            <p class="text-[11px] text-slate-400">已連線至當前表單對應之 Google 試算表後台</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="dashboardExternalLink" href="#" target="_blank" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+            <span>在新分頁開啟</span>
+            <i class="fas fa-external-link-alt text-[10px]"></i>
+          </a>
+          <button id="dashboardCloseBtn" type="button" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="flex-1 w-full bg-slate-950 relative">
+        <iframe id="dashboardIframe" src="about:blank" class="w-full h-full border-0"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 提交歷史紀錄抽屜 (History Drawer Modal) -->
+  <div id="historyModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl border border-slate-700/80 p-6 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+            <i class="fas fa-clock-rotate-left"></i>
+          </div>
+          <h3 class="font-extrabold text-base text-slate-100">本機提交歷史紀錄</h3>
+        </div>
+        <button id="historyCloseBtn" type="button" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div id="historyList" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+        <!-- 動態歷史紀錄 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 成功提示彈窗 (Success Modal) -->
+  <div id="successModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="glass-panel w-full max-w-sm rounded-3xl border border-emerald-500/30 p-6 space-y-4 shadow-2xl text-center">
+      <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto text-2xl shadow-lg shadow-emerald-500/20">
+        <i class="fas fa-circle-check"></i>
+      </div>
+      <div>
+        <h3 class="font-black text-lg text-slate-100">表單提交成功！</h3>
+        <p class="text-xs text-slate-400 mt-1">資料已成功寫入 Google 試算表後台</p>
+      </div>
+      <div id="successSummaryContent" class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800 text-left">
+        <!-- 成功摘要 -->
+      </div>
+      <div class="flex items-center gap-3 pt-2">
+        <button id="successModalClose" type="button" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-xs text-slate-300 transition">返回首頁</button>
+        <button id="successNextBtn" type="button" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-lg shadow-emerald-600/30 transition">再填一筆</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 載入遮罩動畫 (Loading Overlay) -->
+  <div id="loadingOverlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/85 backdrop-blur-sm">
+    <div class="flex flex-col items-center space-y-3">
+      <div class="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500 animate-spin text-xl">
+        <i class="fas fa-spinner"></i>
+      </div>
+      <p class="text-xs font-bold text-slate-300 tracking-wider">正在安全同步至雲端後台...</p>
+    </div>
+  </div>
+
+  <!-- 8. 懸浮提示 Toast (Toast Notification) -->
+  <div id="toastNotification" class="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 hidden translate-y-10 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="px-4 py-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 text-slate-100 shadow-2xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold backdrop-blur-lg">
+      <i class="fas fa-circle-info text-red-500"></i>
+      <span id="toastMsg">提示訊息</span>
+    </div>
+  </div>
+
+  <!-- 載入外部資料設定檔 (forms-data.js) 與核心邏輯檔 (app.js) -->
+  <script src="forms-data.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
