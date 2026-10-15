@@ -1,6 +1,6 @@
 /**
  * 臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單整合系統
- * 核心應用程式邏輯 (App Controller) - 時間精細化與任務自訂升級版
+ * 核心應用程式邏輯 (App Controller) - 功能升級版
  */
 
 (function () {
@@ -217,12 +217,22 @@
 
   function isTaskField(item) {
     const t = item.title || '';
-    return (item.type === 'radio' || item.type === 'checkbox') && (t.includes('任務內容') || t.includes('勤務內容'));
+    return (item.type === 'radio' || item.type === 'checkbox') && (t.includes('任務內容') || t.includes('勤務內容') || t.includes('勤務類型'));
   }
 
   function isCoordField(item) {
     const t = item.title || '';
     return t.includes('經緯度') || t.includes('座標');
+  }
+
+  function isPathField(item) {
+    const t = item.title || '';
+    return (item.type === 'radio' || item.type === 'checkbox') && (t.includes('檔案儲存路徑') || t.includes('儲存路徑'));
+  }
+
+  function isDroneField(item) {
+    const t = item.title || '';
+    return (item.type === 'radio' || item.type === 'checkbox') && (t.includes('無人機資料') || t.includes('無人機機體'));
   }
 
   function renderFormFields(formConfig) {
@@ -374,9 +384,8 @@
             rowHolder.dataset.gridTitle = it.title;
             rowHolder.dataset.rowLabel = row.label;
             rowHolder.innerHTML = `
-              <input type="radio" name="${row.entryName}" value="已清點" class="grid-radio">
-              <input type="radio" name="${row.entryName}" value="有異常" class="grid-radio">
-              <input type="radio" name="${row.entryName}" value="出借" class="grid-radio">
+              <input type="radio" name="${row.entryName}" value="正常" class="grid-radio">
+              <input type="radio" name="${row.entryName}" value="異常" class="grid-radio">
             `;
             hiddenRowsContainer.appendChild(rowHolder);
           });
@@ -459,8 +468,8 @@
               ${row.required ? '<span class="text-red-500">*</span>' : ''}
             </span>
             <div class="status-pill-group self-end sm:self-auto flex items-center gap-1">
-              ${['已清點', '有異常', '出借'].map(opt => `
-                <label class="status-pill-btn cursor-pointer px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1">
+              ${['正常', '異常'].map(opt => `
+                <label class="status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-slate-800 text-slate-400 border border-slate-700">
                   <input type="radio" name="${row.entryName}" value="${escapeHtml(opt)}" class="hidden grid-radio" data-opt="${opt}">
                   <span>${escapeHtml(opt)}</span>
                 </label>
@@ -487,7 +496,7 @@
     const fieldContainer = document.createElement('div');
     fieldContainer.className = 'space-y-1.5';
 
-    // 1. 時間欄位：下拉式選單
+    // 1. 時間欄位
     if (isTimeField(item)) {
       const now = new Date();
       const curH = String(now.getHours()).padStart(2, '0');
@@ -548,9 +557,12 @@
       return fieldContainer;
     }
 
-    // 3. 任務內容欄位（已加入新增自訂任務按鈕，參照自訂人員方式）
+    // 3. 任務內容／勤務類型欄位
     if (isTaskField(item)) {
       const allTasks = [...item.options];
+      if (!allTasks.includes('演習')) {
+        allTasks.push('演習');
+      }
       const isCheckbox = item.type === 'checkbox';
 
       fieldContainer.innerHTML = `
@@ -559,11 +571,69 @@
             ${escapeHtml(item.title)} ${reqTag}
           </label>
           <button type="button" class="btn-add-custom-task text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition" data-entry-name="${item.entryName}" data-input-type="${item.type}">
-            <i class="fas fa-plus-circle text-[11px]"></i> 新增自訂任務
+            <i class="fas fa-plus-circle text-[11px]"></i> 新增自訂選項
           </button>
         </div>
         <div class="flex flex-wrap gap-2 pt-1 task-chips-container" data-entry-name="${item.entryName}">
           ${allTasks.map(opt => `
+            <label class="choice-chip group">
+              <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
+              <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
+                ${isCheckbox ? '<i class="fas fa-check text-[9px] text-transparent transition"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-transparent transition"></span>'}
+              </span>
+              <span>${escapeHtml(opt)}</span>
+            </label>
+          `).join('')}
+        </div>
+      `;
+      return fieldContainer;
+    }
+
+    // 4. 檔案儲存路徑欄位
+    if (isPathField(item)) {
+      const allPaths = [...item.options];
+      const isCheckbox = item.type === 'checkbox';
+
+      fieldContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <label class="block text-xs sm:text-sm font-semibold text-slate-200">
+            ${escapeHtml(item.title)} ${reqTag}
+          </label>
+          <button type="button" class="btn-add-custom-path text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition" data-entry-name="${item.entryName}" data-input-type="${item.type}">
+            <i class="fas fa-folder-plus text-[11px]"></i> 新增自訂路徑
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-1 path-chips-container" data-entry-name="${item.entryName}">
+          ${allPaths.map(opt => `
+            <label class="choice-chip group">
+              <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
+              <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
+                ${isCheckbox ? '<i class="fas fa-check text-[9px] text-transparent transition"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-transparent transition"></span>'}
+              </span>
+              <span>${escapeHtml(opt)}</span>
+            </label>
+          `).join('')}
+        </div>
+      `;
+      return fieldContainer;
+    }
+
+    // 5. 無人機資料欄位（飛安通報事故報告專用）
+    if (isDroneField(item) && formConfig.id === 'accident') {
+      const allDrones = [...item.options];
+      const isCheckbox = item.type === 'checkbox';
+
+      fieldContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <label class="block text-xs sm:text-sm font-semibold text-slate-200">
+            ${escapeHtml(item.title)} ${reqTag}
+          </label>
+          <button type="button" class="btn-add-custom-drone-accident text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition" data-entry-name="${item.entryName}" data-input-type="${item.type}">
+            <i class="fas fa-plus text-[11px]"></i> 新增自訂選項
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-1 drone-accident-chips-container" data-entry-name="${item.entryName}">
+          ${allDrones.map(opt => `
             <label class="choice-chip group">
               <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
               <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
@@ -705,7 +775,9 @@
       case 'text':
       default:
         let placeholder = escapeHtml(item.description || '請輸入...');
-        inputHtml = `<input type="text" name="${item.entryName}" ${isReq ? 'required' : ''} placeholder="${placeholder}" class="tactical-input text-xs sm:text-sm">`;
+        const isRegCodeField = item.title.includes('註冊碼');
+        const extraClass = isRegCodeField ? ' drone-reg-code-input' : '';
+        inputHtml = `<input type="text" name="${item.entryName}" ${isReq ? 'required' : ''} placeholder="${placeholder}" class="tactical-input text-xs sm:text-sm${extraClass}">`;
         break;
     }
 
@@ -739,6 +811,12 @@
           }
           if (formConfig.id === 'mission' && this.name.includes('1591612449')) {
             syncCoordinatesByLocation(formEl, this.value);
+          }
+          if (formConfig.id === 'accident') {
+            const title = this.closest('.form-item-wrapper')?.querySelector('label')?.innerText || '';
+            if (title.includes('無人機資料')) {
+              syncDroneRegCode(formEl, this.value);
+            }
           }
         } else if (this.type === 'checkbox') {
           const chip = this.closest('.choice-chip');
@@ -827,6 +905,13 @@
       });
     });
 
+    formEl.querySelectorAll('.btn-add-custom-drone-accident').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const name = prompt('請輸入自訂無人機資料與註冊碼（例: 機型 (B-AABXXXXXX)）：');
+        if (name && name.trim()) addCustomAccidentDroneToForm(formEl, this.dataset.entryName, this.dataset.inputType, name.trim());
+      });
+    });
+
     formEl.querySelectorAll('.btn-add-custom-person').forEach(btn => {
       btn.addEventListener('click', function () {
         const name = prompt('請輸入新增人員姓名：');
@@ -834,11 +919,17 @@
       });
     });
 
-    // 新增自訂任務按鈕事件監聽
     formEl.querySelectorAll('.btn-add-custom-task').forEach(btn => {
       btn.addEventListener('click', function () {
-        const name = prompt('請輸入自訂任務內容：');
+        const name = prompt('請輸入自訂選項名稱：');
         if (name && name.trim()) addCustomTaskToForm(formEl, this.dataset.entryName, this.dataset.inputType, name.trim());
+      });
+    });
+
+    formEl.querySelectorAll('.btn-add-custom-path').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const name = prompt('請輸入自訂檔案儲存路徑：');
+        if (name && name.trim()) addCustomPathToForm(formEl, this.dataset.entryName, this.dataset.inputType, name.trim());
       });
     });
 
@@ -851,22 +942,32 @@
       const btnMarkAll = formEl.querySelector('#btnMarkAllChecked');
       if (btnMarkAll) {
         btnMarkAll.addEventListener('click', () => {
-          markAllInventoryItems(formEl, '已清點');
-          showToast('⚡ 已將全表單 56 項裝備全數標記為「已清點」！');
+          markAllInventoryItems(formEl, '正常');
+          showToast('⚡ 已將全表單裝備全數標記為「正常」！');
         });
       }
       updateAllInventoryBlockBadges(formEl);
     }
 
+    // 表格 radio 選項（正常／異常）點選互斥與樣式切換事件
     formEl.querySelectorAll('.status-pill-btn input[type="radio"]').forEach(radio => {
       radio.addEventListener('change', function () {
         const group = this.closest('.status-pill-group');
-        if (group) group.querySelectorAll('.status-pill-btn').forEach(b => b.classList.remove('active', 'btn-normal', 'btn-abnormal', 'btn-borrow'));
+        if (!group) return;
+
+        // 重置同組的所有按鈕樣式
+        group.querySelectorAll('.status-pill-btn').forEach(btn => {
+          btn.className = 'status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-slate-800 text-slate-400 border border-slate-700';
+        });
+
+        // 依據目前選取的 Radio 帶入選取樣式
         const parentBtn = this.closest('.status-pill-btn');
         if (parentBtn) {
-          if (this.dataset.opt === '已清點') parentBtn.classList.add('active', 'btn-normal');
-          else if (this.dataset.opt === '有異常') parentBtn.classList.add('active', 'btn-abnormal');
-          else if (this.dataset.opt === '出借') parentBtn.classList.add('active', 'btn-borrow');
+          if (this.value === '正常') {
+            parentBtn.className = 'status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-emerald-600 text-white border border-emerald-500 shadow-md shadow-emerald-900/30';
+          } else if (this.value === '異常') {
+            parentBtn.className = 'status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-rose-600 text-white border border-rose-500 shadow-md shadow-rose-900/30';
+          }
         }
       });
     });
@@ -880,7 +981,19 @@
         if (label.includes('機體') || label.includes('遙控器') || label.includes('充電器')) sel.value = '1個';
         else if (label.includes('電池')) sel.value = '3個';
       });
-      showToast('🚁 已自動帶入標配件數量');
+      showToast('🚁 已自動帶入預設配件數量（機體/遙控器/充電器 1個、電池 3個）');
+    }
+  }
+
+  function syncDroneRegCode(formEl, droneOptionValue) {
+    const match = droneOptionValue.match(/\(([^)]+)\)/);
+    const regCode = match ? match[1].trim() : droneOptionValue.trim();
+
+    const regInput = formEl.querySelector('.drone-reg-code-input');
+    if (regInput) {
+      regInput.value = regCode;
+      regInput.dispatchEvent(new Event('input', { bubbles: true }));
+      showToast(`🚁 已自動帶入無人機註冊碼：${regCode}`);
     }
   }
 
@@ -954,6 +1067,29 @@
     showToast(`🚁 已新增自訂機體：${droneValue}`);
   }
 
+  function addCustomAccidentDroneToForm(formEl, entryName, inputType, name) {
+    const container = formEl.querySelector(`.drone-accident-chips-container[data-entry-name="${entryName}"]`);
+    if (!container) return;
+    let chip = container.querySelector(`input[value="${name}"]`);
+    if (!chip) {
+      const isCheckbox = inputType === 'checkbox';
+      const label = document.createElement('label');
+      label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.innerHTML = `
+        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
+        <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center">${isCheckbox ? '<i class="fas fa-check text-[9px] text-white"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white"></span>'}</span>
+        <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
+      `;
+      container.appendChild(label);
+      chip = label.querySelector('input');
+      label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
+    }
+    chip.checked = true;
+    syncDroneRegCode(formEl, name);
+    showToast(`🚁 已新增並選取無人機資料：${name}`);
+  }
+
   function addCustomPersonToForm(formEl, entryName, inputType, name) {
     const container = formEl.querySelector(`.person-chips-container[data-entry-name="${entryName}"]`);
     if (!container) return;
@@ -995,7 +1131,29 @@
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
-    showToast(`🎯 已新增並選取任務：${name}`);
+    showToast(`🎯 已新增並選取選項：${name}`);
+  }
+
+  function addCustomPathToForm(formEl, entryName, inputType, name) {
+    const container = formEl.querySelector(`.path-chips-container[data-entry-name="${entryName}"]`);
+    if (!container) return;
+    let chip = container.querySelector(`input[value="${name}"]`);
+    if (!chip) {
+      const isCheckbox = inputType === 'checkbox';
+      const label = document.createElement('label');
+      label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.innerHTML = `
+        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
+        <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center">${isCheckbox ? '<i class="fas fa-check text-[9px] text-white"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white"></span>'}</span>
+        <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
+      `;
+      container.appendChild(label);
+      chip = label.querySelector('input');
+      label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
+    }
+    chip.checked = true;
+    showToast(`📁 已新增並選取路徑：${name}`);
   }
 
   function syncCoordinatesByLocation(formEl, locationValue) {
@@ -1011,6 +1169,7 @@
       if (coordRadio) {
         coordRadio.checked = true;
         coordRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        showToast(`📍 已自動帶入預設經緯度：${targetCoord}`);
       }
     }
   }
@@ -1051,8 +1210,8 @@
                   <div class="modal-inv-item-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/40" data-row-entry="${row.entryName}">
                     <span class="text-xs sm:text-sm font-medium text-slate-200">${escapeHtml(row.label)}</span>
                     <div class="flex items-center gap-1.5 self-end sm:self-auto">
-                      ${['已清點', '有異常', '出借'].map(opt => `
-                        <button type="button" class="btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${currentVal === opt ? (opt === '已清點' ? 'bg-emerald-600 text-white border-emerald-500' : opt === '有異常' ? 'bg-rose-600 text-white border-rose-500' : 'bg-amber-600 text-white border-amber-500') : 'bg-slate-800 text-slate-400 border-slate-700'}" data-opt="${opt}">
+                      ${['正常', '異常'].map(opt => `
+                        <button type="button" class="btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${currentVal === opt ? (opt === '正常' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-rose-600 text-white border-rose-500') : 'bg-slate-800 text-slate-400 border-slate-700'}" data-opt="${opt}">
                           ${opt}
                         </button>
                       `).join('')}
@@ -1077,11 +1236,10 @@
         if (targetRadio) targetRadio.checked = true;
 
         rowWrap.querySelectorAll('.btn-modal-opt').forEach(b => {
-          b.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-slate-800 text-slate-400 border-slate-700';
+          b.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-slate-800 text-slate-400 border-slate-700';
         });
-        if (opt === '已清點') this.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-emerald-600 text-white border-emerald-500';
-        else if (opt === '有異常') this.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-rose-600 text-white border-rose-500';
-        else if (opt === '出借') this.className = 'btn-modal-opt px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-amber-600 text-white border-amber-500';
+        if (opt === '正常') this.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-emerald-600 text-white border-emerald-500';
+        else if (opt === '異常') this.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-rose-600 text-white border-rose-500';
 
         updateModalProgress(sectionRows);
         updateInventoryBlockBadge(blk, formEl);
@@ -1089,10 +1247,10 @@
     });
 
     elements.btnSecQuickAll.onclick = () => {
-      sectionRows.forEach(r => { const radio = r.querySelector('input[value="已清點"]'); if (radio) radio.checked = true; });
+      sectionRows.forEach(r => { const radio = r.querySelector('input[value="正常"]'); if (radio) radio.checked = true; });
       openInventorySectionModal(sectionId, formEl);
       updateInventoryBlockBadge(blk, formEl);
-      showToast(`⚡ 已將【${blk.title}】全數標記為已清點！`);
+      showToast(`⚡ 已將【${blk.title}】全數標記為正常！`);
     };
 
     updateModalProgress(sectionRows);
@@ -1113,7 +1271,7 @@
     elements.secModalProgress.innerText = `已清點：${checkedCount} / ${matchedRows.length}`;
   }
 
-  function markAllInventoryItems(formEl, opt = '已清點') {
+  function markAllInventoryItems(formEl, opt = '正常') {
     formEl.querySelectorAll(`.inventory-data-row input[value="${opt}"]`).forEach(r => r.checked = true);
     updateAllInventoryBlockBadges(formEl);
   }
@@ -1122,14 +1280,13 @@
     const card = formEl.querySelector(`.inv-grid-card[data-section-id="${blk.id}"]`);
     if (!card) return;
     const matched = formEl.querySelectorAll(`.inventory-data-row[data-sec-title="${blk.sectionTitle}"]`);
-    let checkedCount = 0, hasIssue = false, hasBorrow = false;
+    let checkedCount = 0, hasIssue = false;
 
     matched.forEach(r => {
       const checked = r.querySelector('input:checked');
       if (checked) {
         checkedCount++;
-        if (checked.value === '有異常') hasIssue = true;
-        if (checked.value === '出借') hasBorrow = true;
+        if (checked.value === '異常') hasIssue = true;
       }
     });
 
@@ -1140,12 +1297,9 @@
     if (hasIssue) {
       badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white';
       badge.innerText = '有異常 ⚠️';
-    } else if (hasBorrow) {
-      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white';
-      badge.innerText = '有出借 🟡';
     } else if (checkedCount === matched.length && matched.length > 0) {
       badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white';
-      badge.innerText = '已完成 ✅';
+      badge.innerText = '正常 ✅';
     } else {
       badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300';
       badge.innerText = `${checkedCount}/${matched.length} 待驗`;
@@ -1226,7 +1380,7 @@
       unlockBackgroundScroll();
     };
     elements.dashboardCloseBtn.addEventListener('click', closeDashboardModal);
-    elements.dashboardModal.addEventListener('click', (e) => { if (e.target === elements.dashboardModal) closeDashboardModal(); });
+    elements.dashboardModal.classList.add('hidden');
   }
 
   function setupEventListeners() {
@@ -1314,8 +1468,36 @@
     if (formConfig.id === 'inventory') {
       const unCheckedRows = activeForm.querySelectorAll('.inventory-data-row:not(:has(input:checked))');
       if (unCheckedRows.length > 0) {
-        showToast(`⚠️ 裝備【${unCheckedRows[0].dataset.rowLabel}】尚未清點`, 'error');
+        showToast(`⚠️ 裝備【${unCheckedRows[0].dataset.rowLabel}】尚未點收`, 'error');
         return;
+      }
+    }
+
+    if (formConfig.id === 'mission') {
+      const savedFieldWrap = activeForm.querySelectorAll('.form-item-wrapper');
+      let isSavedYes = false;
+      savedFieldWrap.forEach(wrap => {
+        const titleEl = wrap.querySelector('label');
+        if (titleEl && titleEl.innerText.includes('存檔')) {
+          const checkedYes = wrap.querySelector('input[value="是"]:checked');
+          if (checkedYes) isSavedYes = true;
+        }
+      });
+
+      if (isSavedYes) {
+        let pathSelected = false;
+        savedFieldWrap.forEach(wrap => {
+          const titleEl = wrap.querySelector('label');
+          if (titleEl && (titleEl.innerText.includes('檔案儲存路徑') || titleEl.innerText.includes('儲存路徑'))) {
+            const checkedPath = wrap.querySelector('input:checked');
+            if (checkedPath) pathSelected = true;
+          }
+        });
+
+        if (!pathSelected) {
+          showToast('⚠️ 飛行影像及飛行軌跡已選擇「是」，請務必選擇「檔案儲存路徑」！', 'error');
+          return;
+        }
       }
     }
 
@@ -1378,7 +1560,7 @@
       summaryItems.push({ label: '表單類型', val: formConfig.title });
       summaryItems.push({ label: '清點日期', val: formData.get('entry.358359977') });
       summaryItems.push({ label: '清點人員', val: formData.get('entry.758490419') });
-      summaryItems.push({ label: '裝備清點項數', val: '56 項裝備已全數核對完成' });
+      summaryItems.push({ label: '裝備點收項數', val: '56 項裝備已全數核對完成' });
     } else if (formConfig.id === 'mission') {
       summaryItems.push({ label: '表單類型', val: formConfig.title });
       summaryItems.push({ label: '出勤日期', val: formData.get('entry.1209667024') });
