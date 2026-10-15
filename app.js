@@ -1,6 +1,6 @@
 /**
  * 臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單整合系統
- * 核心應用程式邏輯 (App Controller) - 戰術優化升級完整版 (含背景滾動鎖定)
+ * 核心應用程式邏輯 (App Controller) - 時間精細化與任務自訂升級版
  */
 
 (function () {
@@ -66,7 +66,6 @@
     eyeIcon: document.getElementById('eyeIcon')
   };
 
-  // 背景滾動鎖定工具函數
   function lockBackgroundScroll() {
     document.body.style.overflow = 'hidden';
   }
@@ -75,7 +74,6 @@
     document.body.style.overflow = '';
   }
 
-  // 每日裝備清點：依照原始表單分區（辦公室、器材室、1樓室外停車格、地下室）
   const INVENTORY_SECTIONS = [
     {
       id: 'sec_office',
@@ -115,19 +113,15 @@
     }
   ];
 
-  // ==========================================
-  // 【設定 5 個表單各自對應的 Google 試算表網址與後台密碼】
-  // ==========================================
-  const CORRECT_PASSWORD = "119"; // 後台解鎖密碼
+  const CORRECT_PASSWORD = "119";
   const FORM_SHEET_URLS = [
-    "https://docs.google.com/spreadsheets/d/1MnEegRXHeZjTPdwAYkHHeuSXqiC978WO71G_ZkzUSP0/edit?resourcekey#gid=2042662497", // 1. 裝備借用
-    "https://docs.google.com/spreadsheets/d/您的第2個試算表ID/edit", // 2. 每日清點
-    "https://docs.google.com/spreadsheets/d/您的第3個試算表ID/edit", // 3. 勤務回報
-    "https://docs.google.com/spreadsheets/d/您的第4個試算表ID/edit", // 4. 裝備保養
-    "https://docs.google.com/spreadsheets/d/您的第5個試算表ID/edit"  // 5. 飛安通報
+    "https://docs.google.com/spreadsheets/d/1MnEegRXHeZjTPdwAYkHHeuSXqiC978WO71G_ZkzUSP0/edit?resourcekey#gid=2042662497",
+    "https://docs.google.com/spreadsheets/d/您的第2個試算表ID/edit",
+    "https://docs.google.com/spreadsheets/d/您的第3個試算表ID/edit",
+    "https://docs.google.com/spreadsheets/d/您的第4個試算表ID/edit",
+    "https://docs.google.com/spreadsheets/d/您的第5個試算表ID/edit"
   ];
 
-  // 初始化程式
   function init() {
     localStorage.removeItem('uav_custom_members');
     localStorage.removeItem('uav_custom_locations');
@@ -140,7 +134,6 @@
     setupDashboardSecurity();
   }
 
-  // 主題切換
   function applyTheme(theme) {
     state.theme = theme;
     localStorage.setItem('uav_theme', theme);
@@ -155,7 +148,6 @@
     }
   }
 
-  // 渲染頂部與手機版導覽列
   function renderNavigation() {
     if (!window.FORMS_DATA || !window.FORMS_DATA.forms) return;
     const forms = window.FORMS_DATA.forms;
@@ -179,7 +171,6 @@
     `).join('');
   }
 
-  // 切換表單
   function switchForm(formId) {
     const forms = window.FORMS_DATA.forms;
     const formConfig = forms.find(f => f.id === formId);
@@ -222,6 +213,11 @@
       t.includes('清點人員') || t.includes('出勤人員') || t.includes('通報人') || 
       t.includes('操作人') || t.includes('填寫人') || t.includes('出借點收人') || t.includes('點收人')
     );
+  }
+
+  function isTaskField(item) {
+    const t = item.title || '';
+    return (item.type === 'radio' || item.type === 'checkbox') && (t.includes('任務內容') || t.includes('勤務內容'));
   }
 
   function isCoordField(item) {
@@ -459,7 +455,8 @@
           <div class="inventory-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-xl bg-slate-800/30 border border-slate-700/40" data-row-entry="${row.entryName}">
             <span class="text-xs sm:text-sm font-medium text-slate-300 flex items-center gap-2">
               <i class="fas fa-cube text-slate-500 text-xs"></i>
-              ${escapeHtml(row.label)}${row.required ? '<span class="text-red-500">*</span>' : ''}
+              ${escapeHtml(row.label)}
+              ${row.required ? '<span class="text-red-500">*</span>' : ''}
             </span>
             <div class="status-pill-group self-end sm:self-auto flex items-center gap-1">
               ${['已清點', '有異常', '出借'].map(opt => `
@@ -490,13 +487,15 @@
     const fieldContainer = document.createElement('div');
     fieldContainer.className = 'space-y-1.5';
 
+    // 1. 時間欄位：下拉式選單 (時、分移至數字後方，以1分鐘為單位)
     if (isTimeField(item)) {
       const now = new Date();
       const curH = String(now.getHours()).padStart(2, '0');
-      const curM = String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, '0');
+      const curM = String(now.getMinutes()).padStart(2, '0');
       const initialTime = `${curH}:${curM}`;
+
       const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-      const minutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+      const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
       fieldContainer.innerHTML = `
         <label class="block text-xs sm:text-sm font-semibold text-slate-200">
@@ -504,22 +503,23 @@
         </label>
         <div class="flex items-center gap-2 time-dropdown-group" data-entry-name="${item.entryName}">
           <input type="hidden" name="${item.entryName}" value="${initialTime}" class="time-combined-input" ${isReq ? 'required' : ''}>
-          <div class="flex-1 flex items-center gap-1.5 bg-slate-900/80 border border-slate-700 rounded-xl p-1.5">
-            <span class="text-xs text-slate-400 pl-2 font-mono">時</span>
+          <div class="flex-1 flex items-center gap-1.5 bg-slate-900/80 border border-slate-700 rounded-xl p-2">
             <select class="time-hour-select bg-slate-800 text-slate-100 font-mono text-sm py-1 px-2 rounded-lg border-0 outline-none flex-1 cursor-pointer">
-              ${hours.map(h => `<option value="${h}" ${h === curH ? 'selected' : ''}>${h} 點</option>`).join('')}
+              ${hours.map(h => `<option value="${h}" ${h === curH ? 'selected' : ''}>${h}</option>`).join('')}
             </select>
-            <span class="text-slate-500 font-bold">:</span>
-            <span class="text-xs text-slate-400 font-mono">分</span>
+            <span class="text-xs text-slate-400 font-bold">時</span>
+            <span class="text-slate-600">:</span>
             <select class="time-min-select bg-slate-800 text-slate-100 font-mono text-sm py-1 px-2 rounded-lg border-0 outline-none flex-1 cursor-pointer">
-              ${minutes.map(m => `<option value="${m}" ${m === curM ? 'selected' : ''}>${m} 分</option>`).join('')}
+              ${minutes.map(m => `<option value="${m}" ${m === curM ? 'selected' : ''}>${m}</option>`).join('')}
             </select>
+            <span class="text-xs text-slate-400 font-bold pr-1">分</span>
           </div>
         </div>
       `;
       return fieldContainer;
     }
 
+    // 2. 人員選擇欄位
     if (isPersonField(item)) {
       const allMembers = [...item.options];
       const isCheckbox = item.type === 'checkbox';
@@ -535,6 +535,35 @@
         </div>
         <div class="flex flex-wrap gap-2 pt-1 person-chips-container" data-entry-name="${item.entryName}">
           ${allMembers.map(opt => `
+            <label class="choice-chip group">
+              <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
+              <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
+                ${isCheckbox ? '<i class="fas fa-check text-[9px] text-transparent transition"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-transparent transition"></span>'}
+              </span>
+              <span>${escapeHtml(opt)}</span>
+            </label>
+          `).join('')}
+        </div>
+      `;
+      return fieldContainer;
+    }
+
+    // 3. 任務內容欄位（新增自訂任務按鈕）
+    if (isTaskField(item)) {
+      const allTasks = [...item.options];
+      const isCheckbox = item.type === 'checkbox';
+
+      fieldContainer.innerHTML = `
+        <div class="flex items-center justify-between">
+          <label class="block text-xs sm:text-sm font-semibold text-slate-200">
+            ${escapeHtml(item.title)} ${reqTag}
+          </label>
+          <button type="button" class="btn-add-custom-task text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition" data-entry-name="${item.entryName}" data-input-type="${item.type}">
+            <i class="fas fa-plus-circle text-[11px]"></i> 新增自訂任務
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-1 task-chips-container" data-entry-name="${item.entryName}">
+          ${allTasks.map(opt => `
             <label class="choice-chip group">
               <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
               <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
@@ -581,7 +610,7 @@
               </label>
             `).join('')}
             <div class="w-full flex items-center gap-2 mt-1">
-              <input type="text" placeholder="自訂座標：例 24.1234, 120.6789" class="tactical-input flex-1 text-xs font-mono custom-coord-input" data-for-entry="${item.entryName}">
+              <input type="text" placeholder="自訂座標..." class="tactical-input flex-1 text-xs font-mono custom-coord-input" data-for-entry="${item.entryName}">
               <button type="button" class="btn-apply-custom-coord px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">帶入自訂</button>
             </div>
           </div>
@@ -625,7 +654,7 @@
             </label>
           `).join('')}
           <div class="w-full flex items-center gap-2 mt-1">
-            <input type="text" placeholder="自訂機體/序號..." class="tactical-input flex-1 text-xs custom-drone-input" data-for-entry="${item.entryName}">
+            <input type="text" placeholder="自訂機體..." class="tactical-input flex-1 text-xs custom-drone-input" data-for-entry="${item.entryName}">
             <button type="button" class="btn-apply-custom-drone px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">帶入自訂</button>
           </div>
         </div>
@@ -805,6 +834,13 @@
       });
     });
 
+    formEl.querySelectorAll('.btn-add-custom-task').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const name = prompt('請輸入自訂任務內容：');
+        if (name && name.trim()) addCustomTaskToForm(formEl, this.dataset.entryName, this.dataset.inputType, name.trim());
+      });
+    });
+
     if (formConfig.id === 'inventory') {
       formEl.querySelectorAll('.inv-grid-card').forEach(card => {
         card.addEventListener('click', function () {
@@ -937,6 +973,28 @@
     }
     chip.checked = true;
     showToast(`👤 已新增並選取人員：${name}`);
+  }
+
+  function addCustomTaskToForm(formEl, entryName, inputType, name) {
+    const container = formEl.querySelector(`.task-chips-container[data-entry-name="${entryName}"]`);
+    if (!container) return;
+    let chip = container.querySelector(`input[value="${name}"]`);
+    if (!chip) {
+      const isCheckbox = inputType === 'checkbox';
+      const label = document.createElement('label');
+      label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.innerHTML = `
+        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
+        <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center">${isCheckbox ? '<i class="fas fa-check text-[9px] text-white"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white"></span>'}</span>
+        <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
+        <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
+      `;
+      container.appendChild(label);
+      chip = label.querySelector('input');
+      label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
+    }
+    chip.checked = true;
+    showToast(`🎯 已新增並選取任務：${name}`);
   }
 
   function syncCoordinatesByLocation(formEl, locationValue) {
@@ -1107,9 +1165,6 @@
     globalSpan.innerText = `總進度：${done} / ${total} 已清點`;
   }
 
-  // ==========================================
-  // 後台數據安全檢視與密碼驗證控制
-  // ==========================================
   function setupDashboardSecurity() {
     if (!elements.dashboardDrawerBtn) return;
 
@@ -1173,7 +1228,6 @@
     elements.dashboardModal.addEventListener('click', (e) => { if (e.target === elements.dashboardModal) closeDashboardModal(); });
   }
 
-  // 通用事件監聽設定
   function setupEventListeners() {
     if (elements.themeToggleBtn) {
       elements.themeToggleBtn.addEventListener('click', () => {
@@ -1331,6 +1385,7 @@
       summaryItems.push({ label: '出勤時間', val: `${formData.get('entry.649405272')} ~ ${formData.get('entry.2035663237')}` });
       summaryItems.push({ label: '出勤地點', val: formData.get('entry.1591612449') });
       summaryItems.push({ label: '出勤人員', val: formData.getAll('entry.1732585170').join(', ') });
+      summaryItems.push({ label: '任務內容', val: formData.getAll('entry.1122334455').join(', ') }); // 假設任務內容對應
       summaryItems.push({ label: '機型', val: formData.getAll('entry.1085168777').join(', ') });
     } else if (formConfig.id === 'maintenance') {
       summaryItems.push({ label: '表單類型', val: formConfig.title });

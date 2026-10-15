@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單整合系統</title>
+  <title>特搜空拍隊 - 臺中市政府消防局</title>
+
+  <!-- 手機加到主畫面圖示 (Apple Touch Icon & Web App Icon) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='4.5' cy='4.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='19.5' cy='4.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='4.5' cy='19.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='19.5' cy='19.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='4.5' cy='4.5' r='0.75' fill='%23ffffff'/><circle cx='19.5' cy='4.5' r='0.75' fill='%23ffffff'/><circle cx='4.5' cy='19.5' r='0.75' fill='%23ffffff'/><circle cx='19.5' cy='19.5' r='0.75' fill='%23ffffff'/><path d='M6.5 6.5L9.5 9.5'/><path d='M17.5 6.5L14.5 9.5'/><path d='M6.5 17.5L9.5 14.5'/><path d='M17.5 17.5L14.5 14.5'/><rect x='9.5' y='9.5' width='5' height='5' rx='1.5' fill='%23ffffff' fill-opacity='0.25'/><circle cx='12' cy='12' r='1' fill='%23ffffff'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='4.5' cy='4.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='19.5' cy='4.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='4.5' cy='19.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='19.5' cy='19.5' r='2.5' stroke-dasharray='2 1.5'/><circle cx='4.5' cy='4.5' r='0.75' fill='%23ffffff'/><circle cx='19.5' cy='4.5' r='0.75' fill='%23ffffff'/><circle cx='4.5' cy='19.5' r='0.75' fill='%23ffffff'/><circle cx='19.5' cy='19.5' r='0.75' fill='%23ffffff'/><path d='M6.5 6.5L9.5 9.5'/><path d='M17.5 6.5L14.5 9.5'/><path d='M6.5 17.5L9.5 14.5'/><path d='M17.5 17.5L14.5 14.5'/><rect x='9.5' y='9.5' width='5' height='5' rx='1.5' fill='%23ffffff' fill-opacity='0.25'/><circle cx='12' cy='12' r='1' fill='%23ffffff'/></svg>">
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome 6.4.0 -->
@@ -90,15 +95,31 @@
       
       <!-- 單位標題與 Logo -->
       <div class="flex items-center gap-2.5 min-w-0">
-        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex-shrink-0 flex items-center justify-center shadow-lg shadow-red-600/30 text-white font-black text-base sm:text-lg">
-          <i class="fas fa-drone"></i>
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-600 to-amber-500 flex-shrink-0 flex items-center justify-center shadow-lg shadow-red-600/30 text-white ring-2 ring-red-500/20">
+          <!-- 四軸多旋翼無人機專屬戰術向量圖標與顏色 -->
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="4.5" cy="4.5" r="2.5" stroke-dasharray="2 1.5"/>
+            <circle cx="19.5" cy="4.5" r="2.5" stroke-dasharray="2 1.5"/>
+            <circle cx="4.5" cy="19.5" r="2.5" stroke-dasharray="2 1.5"/>
+            <circle cx="19.5" cy="19.5" r="2.5" stroke-dasharray="2 1.5"/>
+            <circle cx="4.5" cy="4.5" r="0.75" fill="currentColor"/>
+            <circle cx="19.5" cy="4.5" r="0.75" fill="currentColor"/>
+            <circle cx="4.5" cy="19.5" r="0.75" fill="currentColor"/>
+            <circle cx="19.5" cy="19.5" r="0.75" fill="currentColor"/>
+            <path d="M6.5 6.5L9.5 9.5"/>
+            <path d="M17.5 6.5L14.5 9.5"/>
+            <path d="M6.5 17.5L9.5 14.5"/>
+            <path d="M17.5 17.5L14.5 14.5"/>
+            <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="currentColor" fill-opacity="0.25"/>
+            <circle cx="12" cy="12" r="1" fill="currentColor"/>
+          </svg>
         </div>
         <div class="min-w-0">
-          <h1 class="font-black text-xs sm:text-base tracking-wide text-slate-100 flex items-center gap-1.5 truncate">
-            <span class="truncate">臺中特搜空拍隊</span>
+          <h1 class="font-black text-sm sm:text-base tracking-wide text-slate-100 flex items-center gap-1.5 truncate">
+            <span class="truncate">特搜空拍隊</span>
             <span id="formBadge" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-mono font-bold">裝備借用</span>
           </h1>
-          <p class="text-[9px] sm:text-[11px] text-slate-400 font-mono truncate">TAICHUNG RESCUE DRONE TEAM</p>
+          <p class="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate">臺中市政府消防局</p>
         </div>
       </div>
 
@@ -127,15 +148,9 @@
   <!-- 主內容區 -->
   <main class="flex-1 max-w-3xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-5 space-y-4 sm:space-y-5">
     
-    <!-- 表頭說明區 -->
-    <div class="flex items-center justify-between px-0.5">
-      <div>
-        <h2 id="formHeaderTitle" class="text-base sm:text-xl font-black text-slate-100 flex items-center gap-2">
-          <i class="fas fa-file-lines text-red-500"></i> <span>動態勤務表單填寫</span>
-        </h2>
-        <p id="formHeaderDesc" class="text-[11px] sm:text-xs text-slate-400 mt-0.5">所有填寫內容將透過安全通道即時同步至雲端試算表後台。</p>
-      </div>
-      <a id="formOfficialLink" href="#" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-xs font-semibold transition">
+    <!-- 原始表單按鈕列 -->
+    <div class="flex items-center justify-end px-0.5">
+      <a id="formOfficialLink" href="#" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold transition">
         <span>Google 原始表單</span>
         <i class="fas fa-external-link-alt text-[10px]"></i>
       </a>
@@ -181,7 +196,7 @@
     </div>
   </div>
 
-  <!-- 2. 每日清點分區詳細彈窗 -->
+  <!-- 2. 每日清單分區詳細彈窗 -->
   <div id="inventorySectionModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4">
     <div class="glass-panel w-full max-w-lg rounded-2xl sm:rounded-3xl border border-slate-700/80 p-4 sm:p-6 space-y-3.5 shadow-2xl max-h-[88vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
