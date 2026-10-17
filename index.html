@@ -124,7 +124,7 @@
         </div>
       </div>
 
-      <!-- 右側快捷按鈕群 -->
+      <!-- 右側快捷按鈕群（已包含後台數據檢視按鈕 dashboardDrawerBtn） -->
       <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         <button id="dashboardDrawerBtn" type="button" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-emerald-400 transition shadow-sm" title="雲端試算表後台檢視">
           <i class="fas fa-database text-xs sm:text-sm"></i>
@@ -261,37 +261,33 @@
     </div>
   </div>
 
-<!-- 4. 雲端試算表後台即時檢視彈窗（已改為手機版直式卡片介面） -->
-<div id="dashboardModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/90 backdrop-blur-md p-2 sm:p-6">
-  <div class="glass-panel w-full max-w-3xl h-[95vh] sm:h-[92vh] rounded-2xl sm:rounded-3xl border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden">
-    <div class="flex items-center justify-between px-3.5 py-2.5 sm:px-5 sm:py-3.5 border-b border-slate-800 bg-slate-900/80">
-      <div class="flex items-center gap-2 truncate">
-        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center flex-shrink-0 text-xs sm:text-sm">
-          <i class="fas fa-mobile-screen-button"></i>
+  <!-- 4. 雲端試算表後台 iframe 檢視彈窗 -->
+  <div id="dashboardModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/90 backdrop-blur-md p-2 sm:p-6">
+    <div class="glass-panel w-full max-w-5xl h-[95vh] sm:h-[92vh] rounded-2xl sm:rounded-3xl border border-slate-700/80 flex flex-col shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-3.5 py-2.5 sm:px-5 sm:py-3.5 border-b border-slate-800 bg-slate-900/80">
+        <div class="flex items-center gap-2 truncate">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center flex-shrink-0 text-xs sm:text-sm">
+            <i class="fas fa-table"></i>
+          </div>
+          <div class="min-w-0">
+            <h3 class="font-extrabold text-xs sm:text-base text-slate-100 truncate">雲端試算表後台即時檢視</h3>
+          </div>
         </div>
-        <div class="min-w-0">
-          <h3 class="font-extrabold text-xs sm:text-base text-slate-100 truncate">雲端後台 - 手機直式卡片檢視</h3>
+        <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <a id="dashboardExternalLink" href="#" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-semibold border border-slate-700 transition flex items-center gap-1">
+            <span>開啟外部連結</span>
+            <i class="fas fa-external-link-alt text-[9px]"></i>
+          </a>
+          <button id="dashboardCloseBtn" type="button" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+            <i class="fas fa-times text-xs"></i>
+          </button>
         </div>
       </div>
-      <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-        <a id="dashboardExternalLink" href="#" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-semibold border border-slate-700 transition flex items-center gap-1">
-          <span>開啟原始試算表</span>
-          <i class="fas fa-external-link-alt text-[9px]"></i>
-        </a>
-        <button id="dashboardCloseBtn" type="button" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
-          <i class="fas fa-times text-xs"></i>
-        </button>
-      </div>
-    </div>
-    
-    <!-- 將原本的 iframe 改為 mobileCardDashboard 容器，讓直式卡片可以在這裡上下捲動 -->
-    <div class="flex-1 w-full bg-slate-950 relative overflow-y-auto p-3 sm:p-4">
-      <div id="mobileCardDashboard" class="space-y-3">
-        <div class="text-center text-slate-400 py-12">請點選後台以載入資料...</div>
+      <div class="flex-1 w-full bg-slate-950 relative">
+        <iframe id="dashboardIframe" src="about:blank" class="w-full h-full border-0"></iframe>
       </div>
     </div>
   </div>
-</div>
 
   <!-- 5. 提交歷史紀錄抽屜 -->
   <div id="historyModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4">
