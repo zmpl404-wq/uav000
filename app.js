@@ -1,6 +1,6 @@
 /**
  * 臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單整合系統
- * 核心應用程式邏輯 (App Controller) - 功能升級版
+ * 核心應用程式邏輯 (App Controller) - 戰術優化升級版 (含舊版裝備清點與後台傳送機制)
  */
 
 (function () {
@@ -74,6 +74,7 @@
     document.body.style.overflow = '';
   }
 
+  // 每日裝備清點：依照原始表單分區（辦公室、器材室、1樓室外停車格、地下室）
   const INVENTORY_SECTIONS = [
     {
       id: 'sec_office',
@@ -113,24 +114,13 @@
     }
   ];
 
-const CORRECT_PASSWORD = "119";
-
-  // 1. 原始 Google 試算表連結（供使用者點擊「開啟原始試算表」時使用）
+  const CORRECT_PASSWORD = "119";
   const FORM_SHEET_URLS = [
     "https://docs.google.com/spreadsheets/d/1DpjFpJAVtQigJ6XZbysgRk-2_IiJ6pg9gghHU0EEDc8/edit?gid=1596896565#gid=1596896565", // 1. 裝備借用紀錄表單後台
-    "https://docs.google.com/spreadsheets/d/1yr7Hys_fOuIFiv9mFWv5aMQmRJCo--V4DxivFqL3w0g/edit?gid=954761733#gid=954761733", // 2. 裝備定期清點表單後台
+    "https://docs.google.com/spreadsheets/d/1yr7Hys_fOuIFiv9mFWv5aMQmRJCo--V4DxivFqL3w0g/edit?gid=954761733#gid=954761733", // 2. 裝備定期清單表單後台
     "https://docs.google.com/spreadsheets/d/19KvBej7HR-SqoioTEr0aYHtGqOcfQHwa80IyNeDOVN8/edit?gid=1616503093#gid=1616503093", // 3. 裝備維修保養表單後台
     "https://docs.google.com/spreadsheets/d/1LLUgXskiF_3_As-tqY8imIxMp4wds-qHb_iVON_n22Y/edit?gid=1239965635#gid=1239965635", // 4. 勤務出擊表單後台
-    "https://docs.google.com/spreadsheets/d/1vCO06rznPp71fDVohPvijUEXuWYPjj7VECbimVx1fZo/edit?gid=1312914898#gid=1312914898"   // 5. 飛安通報/事故報告表單後台
-  ];
-
-// 2. 5 個表單對應的 Google Apps Script (GAS) API 網址（用來抓取資料生成直式卡片）
-  const GAS_API_URLS = [
-    "https://script.google.com/macros/s/AKfycbz9TNXMGCfeiWppMZSMEdg9_XnEMHt_Tg4JmndRkful7phBFyQLX7QJ8x4rtXYxGAIPzw/exec",
-    "https://script.google.com/macros/s/您的第2個清點表單GAS網址/exec",
-    "https://script.google.com/macros/s/您的第3個保養表單GAS網址/exec",
-    "https://script.google.com/macros/s/您的第4個出擊表單GAS網址/exec",
-    "https://script.google.com/macros/s/您的第5個飛安通報GAS網址/exec"
+    "https://docs.google.com/spreadsheets/d/1vCO06rznPp71fDVohPvijUEXuWYPjj7VECbimVx1fZo/edit?gid=1312914898#gid=1312914898"    // 5. 飛安通報/事故報告表單後台
   ];
 
   function init() {
@@ -214,7 +204,7 @@ const CORRECT_PASSWORD = "119";
   function isTimeField(item) {
     if (item.type === 'time') return true;
     const t = item.title || '';
-    return t.includes('時:分') || t.includes('時間') && (t.includes('出勤') || t.includes('返隊') || t.includes('起飛') || t.includes('發生'));
+    return t.includes('時:分') || (t.includes('時間') && (t.includes('出勤') || t.includes('返隊') || t.includes('起飛') || t.includes('發生')));
   }
 
   function isPersonField(item) {
@@ -322,6 +312,9 @@ const CORRECT_PASSWORD = "119";
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // 覆蓋為舊版：每日裝備清點特殊佈局 (置頂填寫 + 原生4大分區儀表板 + 備註)
+  // ---------------------------------------------------------------------------
   function renderInventorySpecialLayout(formEl, formConfig) {
     const topCard = document.createElement('div');
     topCard.className = 'form-section-card rounded-2xl p-4 sm:p-5 space-y-3.5';
@@ -359,7 +352,7 @@ const CORRECT_PASSWORD = "119";
       <div class="grid grid-cols-2 gap-2.5 sm:gap-4" id="invDashboardGrid">
         ${INVENTORY_SECTIONS.map(blk => `
           <div class="inv-grid-card glass-panel rounded-2xl p-3 sm:p-4 border border-slate-700/60 bg-gradient-to-br ${blk.color} relative overflow-hidden flex flex-col justify-between cursor-pointer"
-               data-section-id="${blk.id}">
+                data-section-id="${blk.id}">
             <div class="flex items-start justify-between">
               <div class="w-9 h-9 rounded-xl bg-slate-900/60 border border-white/10 flex items-center justify-center text-lg">
                 <i class="${blk.icon}"></i>
@@ -395,8 +388,9 @@ const CORRECT_PASSWORD = "119";
             rowHolder.dataset.gridTitle = it.title;
             rowHolder.dataset.rowLabel = row.label;
             rowHolder.innerHTML = `
-              <input type="radio" name="${row.entryName}" value="正常" class="grid-radio">
-              <input type="radio" name="${row.entryName}" value="異常" class="grid-radio">
+              <input type="radio" name="${row.entryName}" value="已清點" class="grid-radio" data-opt="已清點">
+              <input type="radio" name="${row.entryName}" value="有異常" class="grid-radio" data-opt="有異常">
+              <input type="radio" name="${row.entryName}" value="出借" class="grid-radio" data-opt="出借">
             `;
             hiddenRowsContainer.appendChild(rowHolder);
           });
@@ -461,6 +455,7 @@ const CORRECT_PASSWORD = "119";
     return wrap;
   }
 
+  // 覆蓋為舊版標準網格（清點選項支援：已清點、有異常、出借）
   function renderStandardGrid(item) {
     const wrap = document.createElement('div');
     wrap.className = 'space-y-2';
@@ -479,8 +474,8 @@ const CORRECT_PASSWORD = "119";
               ${row.required ? '<span class="text-red-500">*</span>' : ''}
             </span>
             <div class="status-pill-group self-end sm:self-auto flex items-center gap-1">
-              ${['正常', '異常'].map(opt => `
-                <label class="status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-slate-800 text-slate-400 border border-slate-700">
+              ${['已清點', '有異常', '出借'].map(opt => `
+                <label class="status-pill-btn cursor-pointer px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-slate-800 text-slate-400 border border-slate-700">
                   <input type="radio" name="${row.entryName}" value="${escapeHtml(opt)}" class="hidden grid-radio" data-opt="${opt}">
                   <span>${escapeHtml(opt)}</span>
                 </label>
@@ -553,7 +548,7 @@ const CORRECT_PASSWORD = "119";
             <i class="fas fa-user-plus text-[11px]"></i> 新增自訂人員
           </button>
         </div>
-        <div class="flex flex-wrap gap-2 pt-1 person-chips-container" data-entry-name="${item.entryName}">
+        <div class="flex flex-wrap gap-2 pt-1 person-chips-container" data-entry-name="${item.entryName}" data-original-options='${JSON.stringify(item.options)}'>
           ${allMembers.map(opt => `
             <label class="choice-chip group">
               <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
@@ -585,10 +580,10 @@ const CORRECT_PASSWORD = "119";
             <i class="fas fa-plus-circle text-[11px]"></i> 新增自訂選項
           </button>
         </div>
-        <div class="flex flex-wrap gap-2 pt-1 task-chips-container" data-entry-name="${item.entryName}">
+        <div class="flex flex-wrap gap-2 pt-1 task-chips-container" data-entry-name="${item.entryName}" data-original-options='${JSON.stringify(item.options)}'>
           ${allTasks.map(opt => `
             <label class="choice-chip group">
-              <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
+              <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}" data-is-custom="${!item.options.includes(opt)}">
               <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 group-hover:border-slate-300 mr-1.5 flex items-center justify-center transition">
                 ${isCheckbox ? '<i class="fas fa-check text-[9px] text-transparent transition"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-transparent transition"></span>'}
               </span>
@@ -614,7 +609,7 @@ const CORRECT_PASSWORD = "119";
             <i class="fas fa-folder-plus text-[11px]"></i> 新增自訂路徑
           </button>
         </div>
-        <div class="flex flex-wrap gap-2 pt-1 path-chips-container" data-entry-name="${item.entryName}">
+        <div class="flex flex-wrap gap-2 pt-1 path-chips-container" data-entry-name="${item.entryName}" data-original-options='${JSON.stringify(item.options)}'>
           ${allPaths.map(opt => `
             <label class="choice-chip group">
               <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
@@ -643,7 +638,7 @@ const CORRECT_PASSWORD = "119";
             <i class="fas fa-plus text-[11px]"></i> 新增自訂選項
           </button>
         </div>
-        <div class="flex flex-wrap gap-2 pt-1 drone-accident-chips-container" data-entry-name="${item.entryName}">
+        <div class="flex flex-wrap gap-2 pt-1 drone-accident-chips-container" data-entry-name="${item.entryName}" data-original-options='${JSON.stringify(item.options)}'>
           ${allDrones.map(opt => `
             <label class="choice-chip group">
               <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${item.entryName}" value="${escapeHtml(opt)}">
@@ -669,6 +664,7 @@ const CORRECT_PASSWORD = "119";
       return fieldContainer;
     }
 
+    // 6. 經緯度／座標欄位
     if (isCoordField(item)) {
       if (item.type === 'radio') {
         fieldContainer.innerHTML = `
@@ -680,7 +676,7 @@ const CORRECT_PASSWORD = "119";
               <i class="fas fa-location-crosshairs text-[11px]"></i> 📍 取得目前 GPS 座標
             </button>
           </div>
-          <div class="flex flex-wrap gap-2 pt-1 coord-radio-container" data-entry-name="${item.entryName}">
+          <div class="flex flex-wrap gap-2 pt-1 coord-radio-container" data-entry-name="${item.entryName}" data-original-options='${JSON.stringify(item.options)}'>
             ${item.options.map(opt => `
               <label class="choice-chip group">
                 <input type="radio" name="${item.entryName}" value="${escapeHtml(opt)}">
@@ -724,7 +720,7 @@ const CORRECT_PASSWORD = "119";
             <i class="fas fa-plus text-[11px]"></i> 新增自訂機體
           </button>
         </div>
-        <div class="flex flex-wrap gap-2 pt-1 drone-chips-container" data-entry-name="${item.entryName}">
+        <div class="flex flex-wrap gap-2 pt-1 drone-chips-container" data-entry-name="${item.entryName}" data-original-options='${JSON.stringify(item.options)}'>
           ${item.options.map(opt => `
             <label class="choice-chip group">
               <input type="checkbox" name="${item.entryName}" value="${escapeHtml(opt)}">
@@ -743,6 +739,7 @@ const CORRECT_PASSWORD = "119";
       return fieldContainer;
     }
 
+    // 7. 出勤地點欄位
     if (formConfig.id === 'mission' && item.title.includes('出勤地點') && item.type === 'radio') {
       fieldContainer.innerHTML = `
         <div class="flex items-center justify-between">
@@ -750,7 +747,7 @@ const CORRECT_PASSWORD = "119";
             ${escapeHtml(item.title)} ${reqTag}
           </label>
         </div>
-        <div class="flex flex-wrap gap-2 pt-1 mission-loc-container" data-entry-name="${item.entryName}">
+        <div class="flex flex-wrap gap-2 pt-1 mission-loc-container" data-entry-name="${item.entryName}" data-original-options='${JSON.stringify(item.options)}'>
           ${item.options.map(opt => `
             <label class="choice-chip group">
               <input type="radio" name="${item.entryName}" value="${escapeHtml(opt)}">
@@ -761,8 +758,8 @@ const CORRECT_PASSWORD = "119";
             </label>
           `).join('')}
           <div class="w-full flex items-center gap-2 mt-1">
-            <input type="text" placeholder="自訂地點..." class="tactical-input flex-1 text-xs custom-location-input" data-for-entry="${item.entryName}">
-            <button type="button" class="btn-apply-custom-loc px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">帶入自訂</button>
+            <input type="text" placeholder="自訂地點（例如：OO區XX路）..." class="tactical-input flex-1 text-xs custom-location-input" data-for-entry="${item.entryName}">
+            <button type="button" class="btn-apply-custom-loc px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition whitespace-nowrap">帶入自訂地點</button>
           </div>
         </div>
       `;
@@ -802,48 +799,54 @@ const CORRECT_PASSWORD = "119";
     return fieldContainer;
   }
 
-  function bindDynamicFormEvents(formEl, formConfig) {
-    formEl.querySelectorAll('.choice-chip input').forEach(input => {
-      input.addEventListener('change', function () {
-        if (this.type === 'radio') {
-          formEl.querySelectorAll(`input[name="${this.name}"]`).forEach(sibling => {
-            const chip = sibling.closest('.choice-chip');
-            if (chip) {
-              chip.classList.remove('active');
-              const dot = chip.querySelector('.dot');
-              if (dot) dot.classList.replace('bg-white', 'bg-transparent');
-            }
-          });
-          const currentChip = this.closest('.choice-chip');
-          if (currentChip) {
-            currentChip.classList.add('active');
-            const dot = currentChip.querySelector('.dot');
-            if (dot) dot.classList.replace('bg-transparent', 'bg-white');
-          }
-          if (formConfig.id === 'mission' && this.name.includes('1591612449')) {
-            syncCoordinatesByLocation(formEl, this.value);
-          }
-          if (formConfig.id === 'accident') {
-            const title = this.closest('.form-item-wrapper')?.querySelector('label')?.innerText || '';
-            if (title.includes('無人機資料')) {
-              syncDroneRegCode(formEl, this.value);
-            }
-          }
-        } else if (this.type === 'checkbox') {
-          const chip = this.closest('.choice-chip');
-          const checkIcon = chip.querySelector('i');
-          if (this.checked) {
-            chip.classList.add('active');
-            if (checkIcon) checkIcon.classList.replace('text-transparent', 'text-white');
-          } else {
+  function bindChipEvent(input, formEl) {
+    input.addEventListener('change', function () {
+      if (this.type === 'radio') {
+        formEl.querySelectorAll(`input[name="${this.name}"]`).forEach(sibling => {
+          const chip = sibling.closest('.choice-chip');
+          if (chip) {
             chip.classList.remove('active');
-            if (checkIcon) checkIcon.classList.replace('text-white', 'text-transparent');
+            const dot = chip.querySelector('.dot');
+            if (dot) dot.classList.replace('bg-white', 'bg-transparent');
           }
-          if (formConfig.id === 'borrow' && this.name.includes('1253125050')) {
-            handleDroneBorrowAutoFill(formEl);
+        });
+        const currentChip = this.closest('.choice-chip');
+        if (currentChip) {
+          currentChip.classList.add('active');
+          const dot = currentChip.querySelector('.dot');
+          if (dot) dot.classList.replace('bg-transparent', 'bg-white');
+        }
+        const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
+        if (formConfig && formConfig.id === 'mission' && this.name.includes('1591612449')) {
+          syncCoordinatesByLocation(formEl, this.value);
+        }
+        if (formConfig && formConfig.id === 'accident') {
+          const title = this.closest('.form-item-wrapper')?.querySelector('label')?.innerText || '';
+          if (title.includes('無人機資料')) {
+            syncDroneRegCode(formEl, this.value);
           }
         }
-      });
+      } else if (this.type === 'checkbox') {
+        const chip = this.closest('.choice-chip');
+        const checkIcon = chip.querySelector('i');
+        if (this.checked) {
+          chip.classList.add('active');
+          if (checkIcon) checkIcon.classList.replace('text-transparent', 'text-white');
+        } else {
+          chip.classList.remove('active');
+          if (checkIcon) checkIcon.classList.replace('text-white', 'text-transparent');
+        }
+        const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
+        if (formConfig && formConfig.id === 'borrow' && this.name.includes('1253125050')) {
+          handleDroneBorrowAutoFill(formEl);
+        }
+      }
+    });
+  }
+
+  function bindDynamicFormEvents(formEl, formConfig) {
+    formEl.querySelectorAll('.choice-chip input').forEach(input => {
+      bindChipEvent(input, formEl);
     });
 
     formEl.querySelectorAll('.time-dropdown-group').forEach(grp => {
@@ -953,31 +956,29 @@ const CORRECT_PASSWORD = "119";
       const btnMarkAll = formEl.querySelector('#btnMarkAllChecked');
       if (btnMarkAll) {
         btnMarkAll.addEventListener('click', () => {
-          markAllInventoryItems(formEl, '正常');
-          showToast('⚡ 已將全表單裝備全數標記為「正常」！');
+          markAllInventoryItems(formEl, '已清點');
+          showToast('⚡ 已將全表單裝備全數標記為「已清點」！');
         });
       }
       updateAllInventoryBlockBadges(formEl);
     }
 
-    // 表格 radio 選項（正常／異常）點選互斥與樣式切換事件
     formEl.querySelectorAll('.status-pill-btn input[type="radio"]').forEach(radio => {
       radio.addEventListener('change', function () {
         const group = this.closest('.status-pill-group');
         if (!group) return;
 
-        // 重置同組的所有按鈕樣式
         group.querySelectorAll('.status-pill-btn').forEach(btn => {
           btn.className = 'status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-slate-800 text-slate-400 border border-slate-700';
         });
-
-        // 依據目前選取的 Radio 帶入選取樣式
         const parentBtn = this.closest('.status-pill-btn');
         if (parentBtn) {
-          if (this.value === '正常') {
+          if (this.value === '已清點') {
             parentBtn.className = 'status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-emerald-600 text-white border border-emerald-500 shadow-md shadow-emerald-900/30';
-          } else if (this.value === '異常') {
+          } else if (this.value === '有異常') {
             parentBtn.className = 'status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-rose-600 text-white border border-rose-500 shadow-md shadow-rose-900/30';
+          } else if (this.value === '出借') {
+            parentBtn.className = 'status-pill-btn cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-amber-600 text-white border border-amber-500 shadow-md shadow-amber-900/30';
           }
         }
       });
@@ -1015,14 +1016,16 @@ const CORRECT_PASSWORD = "119";
     if (!chip) {
       const label = document.createElement('label');
       label.className = 'choice-chip group active custom-added-chip border-emerald-500/50 bg-emerald-500/10';
+      label.dataset.isCustomOption = "true";
       label.innerHTML = `
-        <input type="radio" name="${entryName}" value="${escapeHtml(coordValue)}" checked>
+        <input type="radio" name="${entryName}" value="${escapeHtml(coordValue)}" checked data-is-custom="true">
         <span class="w-3.5 h-3.5 rounded-full border border-slate-500 mr-1.5 flex items-center justify-center"><span class="dot w-1.5 h-1.5 rounded-full bg-white"></span></span>
         <span class="text-emerald-400 font-mono font-bold">${escapeHtml(coordValue)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
       container.insertBefore(label, container.querySelector('.custom-coord-input').parentElement);
       chip = label.querySelector('input');
+      bindChipEvent(chip, formEl);
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
@@ -1038,14 +1041,16 @@ const CORRECT_PASSWORD = "119";
     if (!chip) {
       const label = document.createElement('label');
       label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.dataset.isCustomOption = "true";
       label.innerHTML = `
-        <input type="radio" name="${entryName}" value="${escapeHtml(locationValue)}" checked>
+        <input type="radio" name="${entryName}" value="${escapeHtml(locationValue)}" checked data-is-custom="true">
         <span class="w-3.5 h-3.5 rounded-full border border-slate-500 mr-1.5 flex items-center justify-center"><span class="dot w-1.5 h-1.5 rounded-full bg-white"></span></span>
         <span class="text-amber-400 font-bold">${escapeHtml(locationValue)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
       container.insertBefore(label, container.querySelector('.custom-location-input').parentElement);
       chip = label.querySelector('input');
+      bindChipEvent(chip, formEl);
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
@@ -1061,14 +1066,16 @@ const CORRECT_PASSWORD = "119";
     if (!chip) {
       const label = document.createElement('label');
       label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.dataset.isCustomOption = "true";
       label.innerHTML = `
-        <input type="checkbox" name="${entryName}" value="${escapeHtml(droneValue)}" checked>
+        <input type="checkbox" name="${entryName}" value="${escapeHtml(droneValue)}" checked data-is-custom="true">
         <span class="w-3.5 h-3.5 rounded-md border border-slate-500 mr-1.5 flex items-center justify-center"><i class="fas fa-check text-[9px] text-white"></i></span>
         <span class="text-amber-300 font-bold">${escapeHtml(droneValue)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
       container.insertBefore(label, container.querySelector('.custom-drone-input').parentElement);
       chip = label.querySelector('input');
+      bindChipEvent(chip, formEl);
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
@@ -1086,14 +1093,16 @@ const CORRECT_PASSWORD = "119";
       const isCheckbox = inputType === 'checkbox';
       const label = document.createElement('label');
       label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.dataset.isCustomOption = "true";
       label.innerHTML = `
-        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
+        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked data-is-custom="true">
         <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center">${isCheckbox ? '<i class="fas fa-check text-[9px] text-white"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white"></span>'}</span>
         <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
       container.appendChild(label);
       chip = label.querySelector('input');
+      bindChipEvent(chip, formEl);
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
@@ -1109,14 +1118,16 @@ const CORRECT_PASSWORD = "119";
       const isCheckbox = inputType === 'checkbox';
       const label = document.createElement('label');
       label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.dataset.isCustomOption = "true";
       label.innerHTML = `
-        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
+        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked data-is-custom="true">
         <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center">${isCheckbox ? '<i class="fas fa-check text-[9px] text-white"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white"></span>'}</span>
         <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
       container.appendChild(label);
       chip = label.querySelector('input');
+      bindChipEvent(chip, formEl);
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
@@ -1131,14 +1142,16 @@ const CORRECT_PASSWORD = "119";
       const isCheckbox = inputType === 'checkbox';
       const label = document.createElement('label');
       label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.dataset.isCustomOption = "true";
       label.innerHTML = `
-        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
+        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked data-is-custom="true">
         <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center">${isCheckbox ? '<i class="fas fa-check text-[9px] text-white"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white"></span>'}</span>
         <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
       container.appendChild(label);
       chip = label.querySelector('input');
+      bindChipEvent(chip, formEl);
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
@@ -1153,14 +1166,16 @@ const CORRECT_PASSWORD = "119";
       const isCheckbox = inputType === 'checkbox';
       const label = document.createElement('label');
       label.className = 'choice-chip group active custom-added-chip border-amber-500/50 bg-amber-500/10';
+      label.dataset.isCustomOption = "true";
       label.innerHTML = `
-        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked>
+        <input type="${isCheckbox ? 'checkbox' : 'radio'}" name="${entryName}" value="${escapeHtml(name)}" checked data-is-custom="true">
         <span class="w-3.5 h-3.5 ${isCheckbox ? 'rounded-md' : 'rounded-full'} border border-slate-500 mr-1.5 flex items-center justify-center">${isCheckbox ? '<i class="fas fa-check text-[9px] text-white"></i>' : '<span class="dot w-1.5 h-1.5 rounded-full bg-white"></span>'}</span>
         <span class="text-amber-300 font-bold">${escapeHtml(name)}</span>
         <button type="button" class="btn-remove-custom-chip ml-1.5 text-slate-400 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
       `;
       container.appendChild(label);
       chip = label.querySelector('input');
+      bindChipEvent(chip, formEl);
       label.querySelector('.btn-remove-custom-chip').addEventListener('click', (e) => { e.stopPropagation(); label.remove(); });
     }
     chip.checked = true;
@@ -1185,6 +1200,9 @@ const CORRECT_PASSWORD = "119";
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 覆蓋為舊版：每日裝備清單：彈窗與清點狀態同步函數
+  // ---------------------------------------------------------------------------
   function openInventorySectionModal(sectionId, formEl) {
     formEl = formEl || document.getElementById('active_form_inventory');
     if (!formEl) return;
@@ -1221,8 +1239,12 @@ const CORRECT_PASSWORD = "119";
                   <div class="modal-inv-item-row flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/40" data-row-entry="${row.entryName}">
                     <span class="text-xs sm:text-sm font-medium text-slate-200">${escapeHtml(row.label)}</span>
                     <div class="flex items-center gap-1.5 self-end sm:self-auto">
-                      ${['正常', '異常'].map(opt => `
-                        <button type="button" class="btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${currentVal === opt ? (opt === '正常' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-rose-600 text-white border-rose-500') : 'bg-slate-800 text-slate-400 border-slate-700'}" data-opt="${opt}">
+                      ${['已清點', '有異常', '出借'].map(opt => `
+                        <button type="button" class="btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${
+                          currentVal === opt 
+                            ? (opt === '已清點' ? 'bg-emerald-600 text-white border-emerald-500 shadow-md' : (opt === '有異常' ? 'bg-rose-600 text-white border-rose-500 shadow-md' : 'bg-amber-600 text-white border-amber-500 shadow-md')) 
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                        }" data-opt="${opt}">
                           ${opt}
                         </button>
                       `).join('')}
@@ -1249,8 +1271,9 @@ const CORRECT_PASSWORD = "119";
         rowWrap.querySelectorAll('.btn-modal-opt').forEach(b => {
           b.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-slate-800 text-slate-400 border-slate-700';
         });
-        if (opt === '正常') this.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-emerald-600 text-white border-emerald-500';
-        else if (opt === '異常') this.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-rose-600 text-white border-rose-500';
+        if (opt === '已清點') this.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-emerald-600 text-white border-emerald-500 shadow-md';
+        else if (opt === '有異常') this.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-rose-600 text-white border-rose-500 shadow-md';
+        else if (opt === '出借') this.className = 'btn-modal-opt px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 border bg-amber-600 text-white border-amber-500 shadow-md';
 
         updateModalProgress(sectionRows);
         updateInventoryBlockBadge(blk, formEl);
@@ -1258,10 +1281,10 @@ const CORRECT_PASSWORD = "119";
     });
 
     elements.btnSecQuickAll.onclick = () => {
-      sectionRows.forEach(r => { const radio = r.querySelector('input[value="正常"]'); if (radio) radio.checked = true; });
+      sectionRows.forEach(r => { const radio = r.querySelector('input[value="已清點"]'); if (radio) radio.checked = true; });
       openInventorySectionModal(sectionId, formEl);
       updateInventoryBlockBadge(blk, formEl);
-      showToast(`⚡ 已將【${blk.title}】全數標記為正常！`);
+      showToast(`⚡ 已將【${blk.title}】全數標記為已清點！`);
     };
 
     updateModalProgress(sectionRows);
@@ -1282,7 +1305,7 @@ const CORRECT_PASSWORD = "119";
     elements.secModalProgress.innerText = `已清點：${checkedCount} / ${matchedRows.length}`;
   }
 
-  function markAllInventoryItems(formEl, opt = '正常') {
+  function markAllInventoryItems(formEl, opt = '已清點') {
     formEl.querySelectorAll(`.inventory-data-row input[value="${opt}"]`).forEach(r => r.checked = true);
     updateAllInventoryBlockBadges(formEl);
   }
@@ -1291,13 +1314,14 @@ const CORRECT_PASSWORD = "119";
     const card = formEl.querySelector(`.inv-grid-card[data-section-id="${blk.id}"]`);
     if (!card) return;
     const matched = formEl.querySelectorAll(`.inventory-data-row[data-sec-title="${blk.sectionTitle}"]`);
-    let checkedCount = 0, hasIssue = false;
+    let checkedCount = 0, hasIssue = false, hasBorrow = false;
 
     matched.forEach(r => {
       const checked = r.querySelector('input:checked');
       if (checked) {
         checkedCount++;
-        if (checked.value === '異常') hasIssue = true;
+        if (checked.value === '有異常') hasIssue = true;
+        if (checked.value === '出借') hasBorrow = true;
       }
     });
 
@@ -1306,13 +1330,16 @@ const CORRECT_PASSWORD = "119";
     countSpan.innerText = `${checkedCount} / ${matched.length}`;
 
     if (hasIssue) {
-      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white';
+      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white shadow-sm';
       badge.innerText = '有異常 ⚠️';
+    } else if (hasBorrow) {
+      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white shadow-sm';
+      badge.innerText = '有出借 🟡';
     } else if (checkedCount === matched.length && matched.length > 0) {
-      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white';
-      badge.innerText = '正常 ✅';
+      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-sm';
+      badge.innerText = '已完成 ✅';
     } else {
-      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300';
+      badge.className = 'blk-badge px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700';
       badge.innerText = `${checkedCount}/${matched.length} 待驗`;
     }
     updateGlobalInventoryCount(formEl);
@@ -1331,7 +1358,7 @@ const CORRECT_PASSWORD = "119";
     globalSpan.innerText = `總進度：${done} / ${total} 已清點`;
   }
 
-function setupDashboardSecurity() {
+  function setupDashboardSecurity() {
     if (!elements.dashboardDrawerBtn) return;
 
     elements.dashboardDrawerBtn.addEventListener('click', () => {
@@ -1358,33 +1385,14 @@ function setupDashboardSecurity() {
         elements.dashboardPasswordModal.classList.add('hidden');
         elements.dashboardPasswordModal.classList.remove('flex');
 
-        // 取得目前分頁的索引（0~4）
         const activeIndex = typeof window.currentFormIndex !== 'undefined' ? window.currentFormIndex : 0;
         const targetUrl = FORM_SHEET_URLS[activeIndex] || FORM_SHEET_URLS[0];
 
-        // 1. 設定外部按鈕連結（可點擊前往原始 Google 試算表）
-        if (elements.dashboardExternalLink) {
-          elements.dashboardExternalLink.href = targetUrl;
-        }
+        elements.dashboardExternalLink.href = targetUrl;
+        elements.dashboardIframe.src = targetUrl + "?rm=minimal";
 
-        // 2. 定義 5 個表單對應的 Google Apps Script (GAS) API 網址
-        // 請將以下對應的網址換成您實際部署的 GAS 網頁應用程式網址
-        const GAS_API_URLS = [
-          "https://script.google.com/macros/s/AKfycbz9TNXMGCfeiWppMZSMEdg9_XnEMHt_Tg4JmndRkful7phBFyQLX7QJ8x4rtXYxGAIPzw/exec",     // 1. 裝備借用
-          "https://script.google.com/macros/s/您的第2個清點表單GAS網址/exec",     // 2. 裝備清點
-          "https://script.google.com/macros/s/您的第3個保養表單GAS網址/exec",     // 3. 維修保養
-          "https://script.google.com/macros/s/您的第4個出擊表單GAS網址/exec",     // 4. 勤務出擊
-          "https://script.google.com/macros/s/您的第5個飛安通報GAS網址/exec"      // 5. 飛安通報
-        ];
-
-        // 3. 顯示後台視窗
         elements.dashboardModal.classList.remove('hidden');
         elements.dashboardModal.classList.add('flex');
-
-        // 4. 呼叫直式卡片渲染函數
-        const targetApiUrl = GAS_API_URLS[activeIndex] || GAS_API_URLS[0];
-        loadMobileCardDashboard(targetApiUrl);
-
       } else {
         elements.passwordErrorMsg.classList.remove('hidden');
         elements.dashboardPasswordInput.classList.add('border-red-500');
@@ -1406,11 +1414,7 @@ function setupDashboardSecurity() {
     const closeDashboardModal = () => {
       elements.dashboardModal.classList.add('hidden');
       elements.dashboardModal.classList.remove('flex');
-      
-      // 清空卡片容器內容
-      const container = document.getElementById('mobileCardDashboard');
-      if (container) container.innerHTML = '<div class="text-center text-slate-400 py-12">請點選後台以載入資料...</div>';
-      
+      elements.dashboardIframe.src = "about:blank";
       unlockBackgroundScroll();
     };
     elements.dashboardCloseBtn.addEventListener('click', closeDashboardModal);
@@ -1490,7 +1494,6 @@ function setupDashboardSecurity() {
     });
   }
 
-
   function handleFormSubmit() {
     const activeForm = document.getElementById(`active_form_${state.currentFormId}`);
     if (!activeForm) return;
@@ -1505,34 +1508,6 @@ function setupDashboardSecurity() {
       if (unCheckedRows.length > 0) {
         showToast(`⚠️ 裝備【${unCheckedRows[0].dataset.rowLabel}】尚未點收`, 'error');
         return;
-      }
-    }
-
-    if (formConfig.id === 'mission') {
-      const savedFieldWrap = activeForm.querySelectorAll('.form-item-wrapper');
-      let isSavedYes = false;
-      savedFieldWrap.forEach(wrap => {
-        const titleEl = wrap.querySelector('label');
-        if (titleEl && titleEl.innerText.includes('存檔')) {
-          const checkedYes = wrap.querySelector('input[value="是"]:checked');
-          if (checkedYes) isSavedYes = true;
-        }
-      });
-
-      if (isSavedYes) {
-        let pathSelected = false;
-        savedFieldWrap.forEach(wrap => {
-          const titleEl = wrap.querySelector('label');
-          if (titleEl && (titleEl.innerText.includes('檔案儲存路徑') || titleEl.innerText.includes('儲存路徑'))) {
-            const checkedPath = wrap.querySelector('input:checked');
-            if (checkedPath) pathSelected = true;
-          }
-        });
-
-        if (!pathSelected) {
-          showToast('⚠️ 飛行影像及飛行軌跡已選擇「是」，請務必選擇「檔案儲存路徑」！', 'error');
-          return;
-        }
       }
     }
 
@@ -1602,6 +1577,7 @@ function setupDashboardSecurity() {
       summaryItems.push({ label: '出勤單號', val: formData.get('entry.316344842') });
       summaryItems.push({ label: '出勤時間', val: `${formData.get('entry.649405272')} ~ ${formData.get('entry.2035663237')}` });
       summaryItems.push({ label: '出勤地點', val: formData.get('entry.1591612449') });
+      summaryItems.push({ label: '經緯度座標', val: formData.get('entry.1894204307') });
       summaryItems.push({ label: '出勤人員', val: formData.getAll('entry.1732585170').join(', ') });
       summaryItems.push({ label: '任務內容', val: formData.getAll('entry.1122334455').join(', ') });
       summaryItems.push({ label: '機型', val: formData.getAll('entry.1085168777').join(', ') });
@@ -1648,29 +1624,66 @@ function setupDashboardSecurity() {
     const formConfig = window.FORMS_DATA.forms.find(f => f.id === state.currentFormId);
     if (!formConfig) return;
 
-    const formData = new FormData(activeForm);
-    const summaryData = {};
-    for (const [key, value] of formData.entries()) {
-      if (summaryData[key]) summaryData[key] += `, ${value}`;
-      else summaryData[key] = value;
-    }
-
     elements.loadingOverlay.classList.remove('hidden');
     elements.loadingOverlay.classList.add('flex');
 
     try {
       const bodyParts = [];
+      const handledEntries = new Set();
+
+      activeForm.querySelectorAll('[data-original-options]').forEach(container => {
+        const entryName = container.dataset.entryName;
+        if (!entryName) return;
+
+        let origOpts = [];
+        try { origOpts = JSON.parse(container.dataset.originalOptions || '[]'); } catch (e) { origOpts = []; }
+
+        const checkedInputs = Array.from(container.querySelectorAll('input:checked'));
+        
+        if (checkedInputs.length === 0) {
+          handledEntries.add(entryName);
+          return;
+        }
+
+        handledEntries.add(entryName);
+
+        const customValues = [];
+        checkedInputs.forEach(input => {
+          const val = input.value;
+          const isCustom = input.dataset.isCustom === 'true' || !origOpts.includes(val);
+          if (isCustom) {
+            customValues.push(val);
+          } else {
+            bodyParts.push(encodeURIComponent(entryName) + '=' + encodeURIComponent(val));
+          }
+        });
+
+        if (customValues.length > 0) {
+          bodyParts.push(encodeURIComponent(entryName) + '=' + encodeURIComponent('__other_option__'));
+          bodyParts.push(encodeURIComponent(`${entryName}.other_option_response`) + '=' + encodeURIComponent(customValues.join(', ')));
+        }
+      });
+
+      const formData = new FormData(activeForm);
+      const summaryData = {};
+
       for (const [key, value] of formData.entries()) {
+        if (summaryData[key]) summaryData[key] += `, ${value}`;
+        else summaryData[key] = value;
+
+        if (handledEntries.has(key)) continue;
         if (formConfig.id === 'borrow' && value === '0個') continue;
+
         bodyParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
       }
 
-      await fetch(formConfig.actionUrl, {
+      // 透過 no-cors 異步發送至 Google 表單後台
+      fetch(formConfig.actionUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: bodyParts.join('&')
-      });
+      }).catch(() => {});
 
       const record = {
         id: Date.now(),
@@ -1688,7 +1701,7 @@ function setupDashboardSecurity() {
         elements.loadingOverlay.classList.add('hidden');
         elements.loadingOverlay.classList.remove('flex');
         showSuccessModal(record);
-      }, 850);
+      }, 800);
 
     } catch (err) {
       console.error(err);
@@ -1780,71 +1793,3 @@ function setupDashboardSecurity() {
     init();
   }
 })();
-
-
-// 手機版直式卡片動態渲染邏輯
-  async function loadMobileCardDashboard(webAppUrl) {
-    const container = document.getElementById('mobileCardDashboard');
-    if (!container) return;
-    
-    try {
-      container.innerHTML = `
-        <div class="text-center text-slate-400 py-12 space-y-2">
-          <i class="fas fa-spinner fa-spin text-2xl text-amber-400"></i>
-          <p class="text-xs font-bold">正在從雲端同步直式卡片資料...</p>
-        </div>
-      `;
-      
-      const response = await fetch(webAppUrl);
-      const data = await response.json();
-      
-      if (!data || data.length === 0) {
-        container.innerHTML = '<div class="text-center text-slate-500 py-12 text-xs">目前尚無任何通報紀錄</div>';
-        return;
-      }
-
-      // 反轉陣列，讓最新填寫的一筆資料排在最上方
-      data.reverse();
-
-      container.innerHTML = data.map((item, index) => {
-        const keys = Object.keys(item);
-        const timestampKey = keys[0] || '時間戳記';
-
-        return `
-          <div class="glass-panel rounded-2xl p-4 bg-slate-900/90 border border-slate-700/60 shadow-lg space-y-2.5">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span class="text-xs font-mono text-emerald-400 font-bold">
-                <i class="fas fa-clock mr-1"></i>${escapeHtml(item[timestampKey] || '剛剛')}
-              </span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-                紀錄 #${data.length - index}
-              </span>
-            </div>
-            
-            <div class="grid grid-cols-1 gap-1.5 text-xs">
-              ${keys.map(key => {
-                const val = item[key];
-                if (!val) return ''; // 自動略過空白欄位保持乾淨
-                return `
-                  <div class="flex justify-between items-start gap-3 py-1 border-b border-slate-800/40">
-                    <span class="text-slate-400 font-medium whitespace-nowrap">${escapeHtml(key)}：</span>
-                    <span class="text-slate-100 font-bold text-right break-all">${escapeHtml(val)}</span>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-    } catch (err) {
-      console.error(err);
-      container.innerHTML = `
-        <div class="text-center text-rose-400 py-12 space-y-1">
-          <i class="fas fa-exclamation-triangle text-xl"></i>
-          <p class="text-xs font-bold">資料載入失敗</p>
-          <p class="text-[10px] text-slate-500">請確認 GAS API 網址是否正確，且存取權限已設定為「任何人」。</p>
-        </div>
-      `;
-    }
-  }
