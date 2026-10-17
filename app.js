@@ -113,13 +113,13 @@
     }
   ];
 
-  const CORRECT_PASSWORD = "119";
+const CORRECT_PASSWORD = "119";
   const FORM_SHEET_URLS = [
-    "https://docs.google.com/spreadsheets/d/1MnEegRXHeZjTPdwAYkHHeuSXqiC978WO71G_ZkzUSP0/edit?resourcekey#gid=2042662497",
-    "https://docs.google.com/spreadsheets/d/您的第2個試算表ID/edit",
-    "https://docs.google.com/spreadsheets/d/您的第3個試算表ID/edit",
-    "https://docs.google.com/spreadsheets/d/您的第4個試算表ID/edit",
-    "https://docs.google.com/spreadsheets/d/您的第5個試算表ID/edit"
+    "https://docs.google.com/spreadsheets/d/1DpjFpJAVtQigJ6XZbysgRk-2_IiJ6pg9gghHU0EEDc8/edit?gid=1596896565#gid=1596896565", // 1. 裝備借用紀錄表單後台
+    "https://docs.google.com/spreadsheets/d/1yr7Hys_fOuIFiv9mFWv5aMQmRJCo--V4DxivFqL3w0g/edit?gid=954761733#gid=954761733", // 2. 裝備定期清點表單後台
+    "https://docs.google.com/spreadsheets/d/19KvBej7HR-SqoioTEr0aYHtGqOcfQHwa80IyNeDOVN8/edit?gid=1616503093#gid=1616503093", // 3. 裝備維修保養表單後台
+    "https://docs.google.com/spreadsheets/d/1LLUgXskiF_3_As-tqY8imIxMp4wds-qHb_iVON_n22Y/edit?gid=1239965635#gid=1239965635", // 4. 勤務出擊表單後台
+    "https://docs.google.com/spreadsheets/d/1vCO06rznPp71fDVohPvijUEXuWYPjj7VECbimVx1fZo/edit?gid=1312914898#gid=1312914898"   // 5. 飛安通報/事故報告表單後台
   ];
 
   function init() {
