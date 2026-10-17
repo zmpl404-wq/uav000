@@ -114,12 +114,23 @@
   ];
 
 const CORRECT_PASSWORD = "119";
+
+  // 1. 原始 Google 試算表連結（供使用者點擊「開啟原始試算表」時使用）
   const FORM_SHEET_URLS = [
     "https://docs.google.com/spreadsheets/d/1DpjFpJAVtQigJ6XZbysgRk-2_IiJ6pg9gghHU0EEDc8/edit?gid=1596896565#gid=1596896565", // 1. 裝備借用紀錄表單後台
     "https://docs.google.com/spreadsheets/d/1yr7Hys_fOuIFiv9mFWv5aMQmRJCo--V4DxivFqL3w0g/edit?gid=954761733#gid=954761733", // 2. 裝備定期清點表單後台
     "https://docs.google.com/spreadsheets/d/19KvBej7HR-SqoioTEr0aYHtGqOcfQHwa80IyNeDOVN8/edit?gid=1616503093#gid=1616503093", // 3. 裝備維修保養表單後台
     "https://docs.google.com/spreadsheets/d/1LLUgXskiF_3_As-tqY8imIxMp4wds-qHb_iVON_n22Y/edit?gid=1239965635#gid=1239965635", // 4. 勤務出擊表單後台
     "https://docs.google.com/spreadsheets/d/1vCO06rznPp71fDVohPvijUEXuWYPjj7VECbimVx1fZo/edit?gid=1312914898#gid=1312914898"   // 5. 飛安通報/事故報告表單後台
+  ];
+
+// 2. 5 個表單對應的 Google Apps Script (GAS) API 網址（用來抓取資料生成直式卡片）
+  const GAS_API_URLS = [
+    "https://script.google.com/macros/s/AKfycbz9TNXMGCfeiWppMZSMEdg9_XnEMHt_Tg4JmndRkful7phBFyQLX7QJ8x4rtXYxGAIPzw/exec",
+    "https://script.google.com/macros/s/您的第2個清點表單GAS網址/exec",
+    "https://script.google.com/macros/s/您的第3個保養表單GAS網址/exec",
+    "https://script.google.com/macros/s/您的第4個出擊表單GAS網址/exec",
+    "https://script.google.com/macros/s/您的第5個飛安通報GAS網址/exec"
   ];
 
   function init() {
@@ -1320,7 +1331,7 @@ const CORRECT_PASSWORD = "119";
     globalSpan.innerText = `總進度：${done} / ${total} 已清點`;
   }
 
-  function setupDashboardSecurity() {
+function setupDashboardSecurity() {
     if (!elements.dashboardDrawerBtn) return;
 
     elements.dashboardDrawerBtn.addEventListener('click', () => {
@@ -1347,14 +1358,33 @@ const CORRECT_PASSWORD = "119";
         elements.dashboardPasswordModal.classList.add('hidden');
         elements.dashboardPasswordModal.classList.remove('flex');
 
+        // 取得目前分頁的索引（0~4）
         const activeIndex = typeof window.currentFormIndex !== 'undefined' ? window.currentFormIndex : 0;
         const targetUrl = FORM_SHEET_URLS[activeIndex] || FORM_SHEET_URLS[0];
 
-        elements.dashboardExternalLink.href = targetUrl;
-        elements.dashboardIframe.src = targetUrl + "?rm=minimal";
+        // 1. 設定外部按鈕連結（可點擊前往原始 Google 試算表）
+        if (elements.dashboardExternalLink) {
+          elements.dashboardExternalLink.href = targetUrl;
+        }
 
+        // 2. 定義 5 個表單對應的 Google Apps Script (GAS) API 網址
+        // 請將以下對應的網址換成您實際部署的 GAS 網頁應用程式網址
+        const GAS_API_URLS = [
+          "https://script.google.com/macros/s/AKfycbz9TNXMGCfeiWppMZSMEdg9_XnEMHt_Tg4JmndRkful7phBFyQLX7QJ8x4rtXYxGAIPzw/exec",     // 1. 裝備借用
+          "https://script.google.com/macros/s/您的第2個清點表單GAS網址/exec",     // 2. 裝備清點
+          "https://script.google.com/macros/s/您的第3個保養表單GAS網址/exec",     // 3. 維修保養
+          "https://script.google.com/macros/s/您的第4個出擊表單GAS網址/exec",     // 4. 勤務出擊
+          "https://script.google.com/macros/s/您的第5個飛安通報GAS網址/exec"      // 5. 飛安通報
+        ];
+
+        // 3. 顯示後台視窗
         elements.dashboardModal.classList.remove('hidden');
         elements.dashboardModal.classList.add('flex');
+
+        // 4. 呼叫直式卡片渲染函數
+        const targetApiUrl = GAS_API_URLS[activeIndex] || GAS_API_URLS[0];
+        loadMobileCardDashboard(targetApiUrl);
+
       } else {
         elements.passwordErrorMsg.classList.remove('hidden');
         elements.dashboardPasswordInput.classList.add('border-red-500');
@@ -1376,7 +1406,11 @@ const CORRECT_PASSWORD = "119";
     const closeDashboardModal = () => {
       elements.dashboardModal.classList.add('hidden');
       elements.dashboardModal.classList.remove('flex');
-      elements.dashboardIframe.src = "about:blank";
+      
+      // 清空卡片容器內容
+      const container = document.getElementById('mobileCardDashboard');
+      if (container) container.innerHTML = '<div class="text-center text-slate-400 py-12">請點選後台以載入資料...</div>';
+      
       unlockBackgroundScroll();
     };
     elements.dashboardCloseBtn.addEventListener('click', closeDashboardModal);
@@ -1455,6 +1489,7 @@ const CORRECT_PASSWORD = "119";
       showToast('已重設為全新表單，可繼續填寫下一筆！');
     });
   }
+
 
   function handleFormSubmit() {
     const activeForm = document.getElementById(`active_form_${state.currentFormId}`);
@@ -1745,3 +1780,71 @@ const CORRECT_PASSWORD = "119";
     init();
   }
 })();
+
+
+// 手機版直式卡片動態渲染邏輯
+  async function loadMobileCardDashboard(webAppUrl) {
+    const container = document.getElementById('mobileCardDashboard');
+    if (!container) return;
+    
+    try {
+      container.innerHTML = `
+        <div class="text-center text-slate-400 py-12 space-y-2">
+          <i class="fas fa-spinner fa-spin text-2xl text-amber-400"></i>
+          <p class="text-xs font-bold">正在從雲端同步直式卡片資料...</p>
+        </div>
+      `;
+      
+      const response = await fetch(webAppUrl);
+      const data = await response.json();
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-500 py-12 text-xs">目前尚無任何通報紀錄</div>';
+        return;
+      }
+
+      // 反轉陣列，讓最新填寫的一筆資料排在最上方
+      data.reverse();
+
+      container.innerHTML = data.map((item, index) => {
+        const keys = Object.keys(item);
+        const timestampKey = keys[0] || '時間戳記';
+
+        return `
+          <div class="glass-panel rounded-2xl p-4 bg-slate-900/90 border border-slate-700/60 shadow-lg space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <span class="text-xs font-mono text-emerald-400 font-bold">
+                <i class="fas fa-clock mr-1"></i>${escapeHtml(item[timestampKey] || '剛剛')}
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                紀錄 #${data.length - index}
+              </span>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-1.5 text-xs">
+              ${keys.map(key => {
+                const val = item[key];
+                if (!val) return ''; // 自動略過空白欄位保持乾淨
+                return `
+                  <div class="flex justify-between items-start gap-3 py-1 border-b border-slate-800/40">
+                    <span class="text-slate-400 font-medium whitespace-nowrap">${escapeHtml(key)}：</span>
+                    <span class="text-slate-100 font-bold text-right break-all">${escapeHtml(val)}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = `
+        <div class="text-center text-rose-400 py-12 space-y-1">
+          <i class="fas fa-exclamation-triangle text-xl"></i>
+          <p class="text-xs font-bold">資料載入失敗</p>
+          <p class="text-[10px] text-slate-500">請確認 GAS API 網址是否正確，且存取權限已設定為「任何人」。</p>
+        </div>
+      `;
+    }
+  }
