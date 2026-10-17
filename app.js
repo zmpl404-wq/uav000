@@ -1380,16 +1380,82 @@
       }
     });
 
+    // ----------------------------------------------------
+    // 【在這裡直接貼上 loadDashboardDataAsCards 函式】
+    // ----------------------------------------------------
+    async function loadDashboardDataAsCards(formIndex) {
+      if (elements.dashboardIframe) elements.dashboardIframe.style.display = 'none';
+      
+      // 填入您的 5 個 Google Apps Script (GAS) 部署網址
+      const apiUrls = [
+        "您的_GAS_API_網址_1_借用紀錄",
+        "您的_GAS_API_網址_2_定期清單",
+        "您的_GAS_API_網址_3_維修保養",
+        "https://script.google.com/macros/s/AKfycbzubdCklnFC_iKWOdVmikNhgM-Ls02dAmrJDr3ajX2nnbCG_QsYMj8mtUBPVonMfaxn/exec",
+        "您的_GAS_API_網址_5_飛安通報"
+      ];
+      
+      const targetApiUrl = apiUrls[formIndex] || apiUrls[0];
+      
+      let cardContainer = document.getElementById('dashboardCardContainer');
+      if (!cardContainer) {
+        cardContainer = document.createElement('div');
+        cardContainer.id = 'dashboardCardContainer';
+        cardContainer.className = 'p-4 space-y-3 overflow-y-auto flex-1 bg-slate-950';
+        elements.dashboardModal.querySelector('.flex-1').appendChild(cardContainer);
+      }
+      
+      cardContainer.innerHTML = `
+        <div class="text-center py-10 text-slate-400">
+          <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+          <p class="text-xs">正在載入雲端後台數據...</p>
+        </div>
+      `;
+
+      try {
+        const response = await fetch(targetApiUrl);
+        const data = await response.json();
+        
+        if (data.length === 0) {
+          cardContainer.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">目前尚無後台資料</div>`;
+          return;
+        }
+
+        cardContainer.innerHTML = data.reverse().map(row => `
+          <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2 shadow-md">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span class="text-xs font-mono text-amber-400 font-bold">
+                <i class="fas fa-clock mr-1"></i> ${escapeHtml(row['時間戳記'] || '未知時間')}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                已同步
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              ${Object.entries(row).slice(1, 7).map(([key, val]) => `
+                <div class="space-y-0.5">
+                  <span class="text-[10px] text-slate-400 block">${escapeHtml(key)}</span>
+                  <span class="text-slate-200 font-medium truncate block">${escapeHtml(val || '-')}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        cardContainer.innerHTML = `<div class="text-center py-10 text-rose-400 text-xs">⚠️ 載入後台數據失敗，請檢查網路連線</div>`;
+      }
+    }
+
     const verifyPassword = () => {
       if (elements.dashboardPasswordInput.value === CORRECT_PASSWORD) {
         elements.dashboardPasswordModal.classList.add('hidden');
         elements.dashboardPasswordModal.classList.remove('flex');
 
         const activeIndex = typeof window.currentFormIndex !== 'undefined' ? window.currentFormIndex : 0;
-        const targetUrl = FORM_SHEET_URLS[activeIndex] || FORM_SHEET_URLS[0];
-
-        elements.dashboardExternalLink.href = targetUrl;
-        elements.dashboardIframe.src = targetUrl + "?rm=minimal";
+        
+        // 呼叫卡片載入函式，不再依賴 iframe
+        loadDashboardDataAsCards(activeIndex);
 
         elements.dashboardModal.classList.remove('hidden');
         elements.dashboardModal.classList.add('flex');
@@ -1414,7 +1480,6 @@
     const closeDashboardModal = () => {
       elements.dashboardModal.classList.add('hidden');
       elements.dashboardModal.classList.remove('flex');
-      elements.dashboardIframe.src = "about:blank";
       unlockBackgroundScroll();
     };
     elements.dashboardCloseBtn.addEventListener('click', closeDashboardModal);
