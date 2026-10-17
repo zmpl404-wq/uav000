@@ -1,6 +1,6 @@
 /**
  * 臺中市政府消防局 特搜大隊特搜空拍隊 - 勤務表單整合系統
- * 核心應用程式邏輯 (App Controller) - 戰術優化升級版 (含舊版裝備清點與後台傳送機制)
+ * 核心應用程式邏輯 (App Controller) - 戰術優化升級版 (含舊版裝備清單與後台卡片檢視)
  */
 
 (function () {
@@ -312,9 +312,6 @@
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // 覆蓋為舊版：每日裝備清點特殊佈局 (置頂填寫 + 原生4大分區儀表板 + 備註)
-  // ---------------------------------------------------------------------------
   function renderInventorySpecialLayout(formEl, formConfig) {
     const topCard = document.createElement('div');
     topCard.className = 'form-section-card rounded-2xl p-4 sm:p-5 space-y-3.5';
@@ -352,7 +349,7 @@
       <div class="grid grid-cols-2 gap-2.5 sm:gap-4" id="invDashboardGrid">
         ${INVENTORY_SECTIONS.map(blk => `
           <div class="inv-grid-card glass-panel rounded-2xl p-3 sm:p-4 border border-slate-700/60 bg-gradient-to-br ${blk.color} relative overflow-hidden flex flex-col justify-between cursor-pointer"
-                data-section-id="${blk.id}">
+              data-section-id="${blk.id}">
             <div class="flex items-start justify-between">
               <div class="w-9 h-9 rounded-xl bg-slate-900/60 border border-white/10 flex items-center justify-center text-lg">
                 <i class="${blk.icon}"></i>
@@ -455,7 +452,6 @@
     return wrap;
   }
 
-  // 覆蓋為舊版標準網格（清點選項支援：已清點、有異常、出借）
   function renderStandardGrid(item) {
     const wrap = document.createElement('div');
     wrap.className = 'space-y-2';
@@ -502,7 +498,6 @@
     const fieldContainer = document.createElement('div');
     fieldContainer.className = 'space-y-1.5';
 
-    // 1. 時間欄位
     if (isTimeField(item)) {
       const now = new Date();
       const curH = String(now.getHours()).padStart(2, '0');
@@ -534,7 +529,6 @@
       return fieldContainer;
     }
 
-    // 2. 人員選擇欄位
     if (isPersonField(item)) {
       const allMembers = [...item.options];
       const isCheckbox = item.type === 'checkbox';
@@ -563,7 +557,6 @@
       return fieldContainer;
     }
 
-    // 3. 任務內容／勤務類型欄位
     if (isTaskField(item)) {
       const allTasks = [...item.options];
       if (!allTasks.includes('演習')) {
@@ -595,7 +588,6 @@
       return fieldContainer;
     }
 
-    // 4. 檔案儲存路徑欄位
     if (isPathField(item)) {
       const allPaths = [...item.options];
       const isCheckbox = item.type === 'checkbox';
@@ -624,7 +616,6 @@
       return fieldContainer;
     }
 
-    // 5. 無人機資料欄位（飛安通報事故報告專用）
     if (isDroneField(item) && formConfig.id === 'accident') {
       const allDrones = [...item.options];
       const isCheckbox = item.type === 'checkbox';
@@ -664,7 +655,6 @@
       return fieldContainer;
     }
 
-    // 6. 經緯度／座標欄位
     if (isCoordField(item)) {
       if (item.type === 'radio') {
         fieldContainer.innerHTML = `
@@ -739,7 +729,6 @@
       return fieldContainer;
     }
 
-    // 7. 出勤地點欄位
     if (formConfig.id === 'mission' && item.title.includes('出勤地點') && item.type === 'radio') {
       fieldContainer.innerHTML = `
         <div class="flex items-center justify-between">
@@ -1200,9 +1189,6 @@
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 覆蓋為舊版：每日裝備清單：彈窗與清點狀態同步函數
-  // ---------------------------------------------------------------------------
   function openInventorySectionModal(sectionId, formEl) {
     formEl = formEl || document.getElementById('active_form_inventory');
     if (!formEl) return;
@@ -1380,31 +1366,27 @@
       }
     });
 
-    // ----------------------------------------------------
-    // 【在這裡直接貼上 loadDashboardDataAsCards 函式】
-    // ----------------------------------------------------
     async function loadDashboardDataAsCards(formIndex) {
       if (elements.dashboardIframe) elements.dashboardIframe.style.display = 'none';
       
-// 填入您的 5 個 Google Apps Script (GAS) 部署網址
       const apiUrls = [
         "https://script.google.com/macros/s/AKfycbwxmHXBpEOooT_zOdnDLBsdQhvxFNYMPjgtIDswFu7LxFJk-JkbrQdOGOwL87ValsY/exec", // 1. 裝備借用紀錄
         "https://script.google.com/macros/s/AKfycbyRAJ8Tr2q1Sk3a3MKp1nIjio_axAnwYP76iq4SF_bAjcMSzhqRCK7SVAj037V_U120/exec", // 2. 裝備定期清單
         "https://script.google.com/macros/s/AKfycbxdHUEY34te5kOJ03Io5npb8jHFq6O3iyfoLGZWfe4XlvgC19ln8eqviXBKhh1j-Eo8/exec", // 3. 裝備維修保養
-        "https://script.google.com/macros/s/AKfycbzubdCklnFC_iKWOdVmikNhgM-Ls02dAmrJDr3ajX2nnbCG_QsYMj8mtUBPVonMfaxn/exec", // 4. 勤務出擊 (已補上陣列間隔逗號)
+        "https://script.google.com/macros/s/AKfycbzubdCklnFC_iKWOdVmikNhgM-Ls02dAmrJDr3ajX2nnbCG_QsYMj8mtUBPVonMfaxn/exec", // 4. 勤務出擊
         "https://script.google.com/macros/s/AKfycbyOWSXfxex1dRkgUan91FWmU-pIlxS-7iHyaNP9UIAkxLeCPWj29oPFlxfXstUzaUdl/exec"  // 5. 飛安通報
       ];
       
       const targetApiUrl = apiUrls[formIndex] || apiUrls[0];
       
-let cardContainer = document.getElementById('dashboardCardContainer');
-  if (!cardContainer) {
-    cardContainer = document.createElement('div');
-    cardContainer.id = 'dashboardCardContainer';
-    // ✅ 修正後：加入 max-h-[75vh] 與 overflow-y-auto 讓電腦版可以順暢上下滑動
-    cardContainer.className = 'p-4 space-y-3 overflow-y-auto max-h-[75vh] bg-slate-950';
-    elements.dashboardModal.querySelector('.flex-1').appendChild(cardContainer);
-  }
+      let cardContainer = document.getElementById('dashboardCardContainer');
+      if (!cardContainer) {
+        cardContainer = document.createElement('div');
+        cardContainer.id = 'dashboardCardContainer';
+        // ✅ 修正：移除佔滿全高的設計，改為 max-h 配合自適應高度，消除下方多餘的黑塊
+        cardContainer.className = 'p-3 sm:p-4 space-y-3 overflow-y-auto max-h-[65vh] sm:max-h-[72vh] h-fit bg-slate-950';
+        elements.dashboardModal.querySelector('.flex-1').appendChild(cardContainer);
+      }
       
       cardContainer.innerHTML = `
         <div class="text-center py-10 text-slate-400">
@@ -1454,16 +1436,12 @@ let cardContainer = document.getElementById('dashboardCardContainer');
         elements.dashboardPasswordModal.classList.remove('flex');
 
         const activeIndex = typeof window.currentFormIndex !== 'undefined' ? window.currentFormIndex : 0;
-        
-        // 1. 取得對應的 Google 試算表原始網址
         const targetUrl = FORM_SHEET_URLS[activeIndex] || FORM_SHEET_URLS[0];
 
-        // 2. 【新增】將網址賦值給右上角的「開啟外部連結」按鈕
         if (elements.dashboardExternalLink) {
           elements.dashboardExternalLink.href = targetUrl;
         }
         
-        // 3. 呼叫卡片載入函式，不再依賴 iframe
         loadDashboardDataAsCards(activeIndex);
 
         elements.dashboardModal.classList.remove('hidden');
@@ -1751,7 +1729,6 @@ let cardContainer = document.getElementById('dashboardCardContainer');
         bodyParts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
       }
 
-      // 透過 no-cors 異步發送至 Google 表單後台
       fetch(formConfig.actionUrl, {
         method: 'POST',
         mode: 'no-cors',
