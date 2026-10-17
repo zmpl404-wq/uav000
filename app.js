@@ -1386,13 +1386,13 @@
     async function loadDashboardDataAsCards(formIndex) {
       if (elements.dashboardIframe) elements.dashboardIframe.style.display = 'none';
       
-      // 填入您的 5 個 Google Apps Script (GAS) 部署網址
+// 填入您的 5 個 Google Apps Script (GAS) 部署網址
       const apiUrls = [
-        "您的_GAS_API_網址_1_借用紀錄",
-        "您的_GAS_API_網址_2_定期清單",
-        "您的_GAS_API_網址_3_維修保養",
-        "https://script.google.com/macros/s/AKfycbzubdCklnFC_iKWOdVmikNhgM-Ls02dAmrJDr3ajX2nnbCG_QsYMj8mtUBPVonMfaxn/exec",
-        "您的_GAS_API_網址_5_飛安通報"
+        "https://script.google.com/macros/s/AKfycbwxmHXBpEOooT_zOdnDLBsdQhvxFNYMPjgtIDswFu7LxFJk-JkbrQdOGOwL87ValsY/exec", // 1. 裝備借用紀錄
+        "https://script.google.com/macros/s/AKfycbyRAJ8Tr2q1Sk3a3MKp1nIjio_axAnwYP76iq4SF_bAjcMSzhqRCK7SVAj037V_U120/exec", // 2. 裝備定期清單
+        "https://script.google.com/macros/s/AKfycbxdHUEY34te5kOJ03Io5npb8jHFq6O3iyfoLGZWfe4XlvgC19ln8eqviXBKhh1j-Eo8/exec", // 3. 裝備維修保養
+        "https://script.google.com/macros/s/AKfycbzubdCklnFC_iKWOdVmikNhgM-Ls02dAmrJDr3ajX2nnbCG_QsYMj8mtUBPVonMfaxn/exec", // 4. 勤務出擊 (已補上陣列間隔逗號)
+        "https://script.google.com/macros/s/AKfycbyOWSXfxex1dRkgUan91FWmU-pIlxS-7iHyaNP9UIAkxLeCPWj29oPFlxfXstUzaUdl/exec"  // 5. 飛安通報
       ];
       
       const targetApiUrl = apiUrls[formIndex] || apiUrls[0];
