@@ -1455,7 +1455,15 @@ let cardContainer = document.getElementById('dashboardCardContainer');
 
         const activeIndex = typeof window.currentFormIndex !== 'undefined' ? window.currentFormIndex : 0;
         
-        // 呼叫卡片載入函式，不再依賴 iframe
+        // 1. 取得對應的 Google 試算表原始網址
+        const targetUrl = FORM_SHEET_URLS[activeIndex] || FORM_SHEET_URLS[0];
+
+        // 2. 【新增】將網址賦值給右上角的「開啟外部連結」按鈕
+        if (elements.dashboardExternalLink) {
+          elements.dashboardExternalLink.href = targetUrl;
+        }
+        
+        // 3. 呼叫卡片載入函式，不再依賴 iframe
         loadDashboardDataAsCards(activeIndex);
 
         elements.dashboardModal.classList.remove('hidden');
