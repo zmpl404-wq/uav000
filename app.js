@@ -1397,13 +1397,14 @@
       
       const targetApiUrl = apiUrls[formIndex] || apiUrls[0];
       
-      let cardContainer = document.getElementById('dashboardCardContainer');
-      if (!cardContainer) {
-        cardContainer = document.createElement('div');
-        cardContainer.id = 'dashboardCardContainer';
-        cardContainer.className = 'p-4 space-y-3 overflow-y-auto flex-1 bg-slate-950';
-        elements.dashboardModal.querySelector('.flex-1').appendChild(cardContainer);
-      }
+let cardContainer = document.getElementById('dashboardCardContainer');
+  if (!cardContainer) {
+    cardContainer = document.createElement('div');
+    cardContainer.id = 'dashboardCardContainer';
+    // ✅ 修正後：加入 max-h-[75vh] 與 overflow-y-auto 讓電腦版可以順暢上下滑動
+    cardContainer.className = 'p-4 space-y-3 overflow-y-auto max-h-[75vh] bg-slate-950';
+    elements.dashboardModal.querySelector('.flex-1').appendChild(cardContainer);
+  }
       
       cardContainer.innerHTML = `
         <div class="text-center py-10 text-slate-400">
