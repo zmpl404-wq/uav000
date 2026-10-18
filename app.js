@@ -100,7 +100,7 @@
       icon: 'fas fa-square-parking',
       color: 'from-amber-600/25 to-orange-600/25 border-amber-500/30 text-amber-400',
       badgeColor: 'text-amber-400 bg-amber-500/20 border-amber-500/30',
-      desc: '備勤車42車、西屯43車(帳棚/桌椅)',
+      desc: '空拍41車(帳棚/桌椅)',
       sectionTitle: '1樓室外停車格'
     },
     {

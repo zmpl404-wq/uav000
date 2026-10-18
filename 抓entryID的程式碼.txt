@@ -1,0 +1,37 @@
+try {
+    let rawData = FB_PUBLIC_LOAD_DATA_[1][1];
+    let results = [];
+
+    rawData.forEach(item => {
+        if (!item || !item[1]) return;
+        
+        let mainTitle = item[1]; // 主題目 / 大標題
+        let questionData = item[4]; // 題目細節與 Entry ID 陣列
+
+        if (questionData && questionData.length > 0) {
+            questionData.forEach(subItem => {
+                let entryId = 'entry.' + subItem[0]; // 取得 Entry ID
+                let subTitle = subItem[3] ? subItem[3][0] : '(單一題目)'; // 抓取子題目（如裝備名稱）
+                
+                // 抓取選項（已清點、有異常等）
+                let options = [];
+                if (subItem[1]) {
+                    subItem[1].forEach(opt => {
+                        if (opt[0]) options.push(opt[0]);
+                    });
+                }
+
+                results.push({
+                    '主分類與題目': mainTitle,
+                    '子題目/裝備項目': subTitle,
+                    'Entry_ID': entryId,
+                    '可選選項': options.length > 0 ? options.join(' | ') : '填空/無選項'
+                });
+            });
+        }
+    });
+
+    console.table(results);
+} catch (e) {
+    console.error("解析失敗，請確認是否在公開填寫頁面中執行！", e);
+}
